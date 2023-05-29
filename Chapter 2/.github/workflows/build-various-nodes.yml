@@ -1,0 +1,63 @@
+name: Node.js CI - different engines
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [14, 16]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - name: Restore Cache
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-${{ matrix.node }}
+    - name: Use Node.js ${{ matrix.node }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node }}
+        cache: 'npm'
+    - name: run build
+      run: npm ci
+    - run: npm run build --if-present    
+    - name: Save Cache    
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+    - uses: actions/upload-artifact@v3
+      with:
+        name: my-app-${{ matrix.os }}-${{ matrix.node }}
+        path: dist/
+        retention-days: 1
+
+  deploy-job:
+    needs: [ build ]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: [14, 16]
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: my-app-${{ matrix.os }}-${{ matrix.node }}
+          path: downloaded-content
+      - run: |
+          ls downloaded-content
+      - uses: geekyeggo/delete-artifact@v2
+        with:
+            name: my-app-${{ matrix.os }}-${{ matrix.node }}

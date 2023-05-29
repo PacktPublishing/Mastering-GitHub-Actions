@@ -1,0 +1,13 @@
+name: Node Version in a container
+
+on:
+  workflow_dispatch:
+
+jobs:
+  node_job:
+    runs-on: ubuntu-latest
+    container:
+      image: node:12
+    steps:
+      - name: Run a command
+        run: node --version

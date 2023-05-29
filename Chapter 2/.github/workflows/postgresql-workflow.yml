@@ -1,0 +1,34 @@
+name: PostgreSQL Service Example
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test_db:
+    name: Check PostgreSQL Service
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: testdb
+        ports:
+          - 5432:5432
+        # health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v3
+    - name: Install PostgreSQL client
+      run: sudo apt-get -yqq install postgresql-client
+    - name: Check PostgreSQL Service
+      env:
+        PGPASSWORD: postgres
+      run: |
+        psql -h localhost -U postgres -d testdb -c 'SELECT version();'
