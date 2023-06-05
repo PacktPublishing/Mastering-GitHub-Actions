@@ -1,0 +1,13 @@
+name: Node.js CI - with cache - composite
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - name: Build Node
+      uses: YOUR_ORG/GHA.workflows/.github/actions/build-node@main

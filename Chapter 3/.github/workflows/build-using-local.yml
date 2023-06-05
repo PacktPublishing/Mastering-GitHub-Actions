@@ -1,0 +1,14 @@
+
+name: Node.js CI - with cache
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - uses: ./.github/actions/build-node
