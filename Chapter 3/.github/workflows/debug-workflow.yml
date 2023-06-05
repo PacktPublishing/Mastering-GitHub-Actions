@@ -10,4 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Debug Workflow
-        uses: hmarr/debug-action@v3
+        uses: hmarr/debug-action@v2
