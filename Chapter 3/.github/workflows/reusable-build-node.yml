@@ -1,0 +1,9 @@
+name: Node.js CI - reusable
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  ci:
+    name: deployment
+    uses: YOUR_ORG/GHA.workflows/.github/workflows/gha.workflows.build-node.yml@main
