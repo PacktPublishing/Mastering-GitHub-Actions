@@ -1,0 +1,50 @@
+name: Node.js CI - with cache and artefact and download
+
+on:
+  workflow_dispatch:
+  push:
+
+run-name: Cache, artefact and download test by ${{ github.actor }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - name: Restore Cache
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-
+    - name: Use Node.js 14.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 14.x
+        cache: 'npm'
+    - name: run build
+      run: npm ci
+    - run: npm run build --if-present    
+    - name: Save Cache    
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@v2
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    - uses: actions/upload-artifact@v3
+      with:
+        name: my-app
+        path: dist/
+        retention-days: 1
+
+  deploy-job:
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: my-app
+          path: downloaded-content
