@@ -1,4 +1,4 @@
-name: Node.js CI - with cache and artefact and download
+name: Node.js CI - with cache and artefact and download and delete
 
 on:
   workflow_dispatch:
