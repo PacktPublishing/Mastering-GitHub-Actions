@@ -1,0 +1,38 @@
+name: Lint Javascript Code
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  checks: write
+  contents: write
+  
+jobs:
+  run-linters:
+    name: Run linters
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v2
+      - name: Generate token
+        id: generate_token
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.TEMPLE_GUARDS_APP_ID}}
+          installation_id: ${{ secrets.TEMPLATE_GUARDS_INSTALL_ID }}
+          private_key: ${{ secrets.TEMPLE_GUARDS_PRIVATE_KEY }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 14.x
+      - name: Install Node.js dependencies
+        run: npm ci
+      - name: Run linters
+        uses: wearerequired/lint-action@v2
+        with:
+          eslint: true
+          prettier: true
+          github_token: ${{ steps.generate_token.outputs.token }}
+          auto_fix: true
