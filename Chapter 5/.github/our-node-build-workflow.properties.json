@@ -1,0 +1,13 @@
+{
+    "name": "Node Building the Jedi Way",
+    "description": "Jedi Schools Organization CI starter workflow for node",
+    "iconName": "octicon home",
+    "categories": [
+        "Webpack",
+        "JavaScript",
+        "continuous-integration"
+    ],
+    "filePatterns": [
+        "jedi-way.md"
+    ]
+}
