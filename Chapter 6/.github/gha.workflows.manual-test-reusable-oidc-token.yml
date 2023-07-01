@@ -2,6 +2,10 @@ name: Reusable Manual Get Id Token with custom audience
 
 on:
   workflow_call:
+    inputs:
+      audience:
+        description: the audience
+        required: true
 
 jobs:
   token_source:  
@@ -21,7 +25,7 @@ jobs:
             core.setOutput('TOKEN', token.trim())
             core.setOutput('IDTOKENURL', runtimeUrl.trim())
       - run: |
-          IDTOKEN=$(curl -H "Authorization: bearer  ${{steps.script.outputs.TOKEN}}" ${{steps.script.outputs.IDTOKENURL}}  -H "Accept: application/json; api-version=2.0" -H "Content-Type: application/json" -d '{"aud":"${{github.event.client_payload.audience}}"}' | jq -r '.value')
+          IDTOKEN=$(curl -H "Authorization: bearer  ${{steps.script.outputs.TOKEN}}" ${{steps.script.outputs.IDTOKENURL}}  -H "Accept: application/json; api-version=2.0" -H "Content-Type: application/json" -d '{"aud":"${{inputs.audience}}"}' | jq -r '.value')
           echo $IDTOKEN
           jwtd() {
               if [[ -x $(command -v jq) ]]; then
