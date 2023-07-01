@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       audience:
+        type: string
         description: audience to be embedded in token
         default: bob
 
