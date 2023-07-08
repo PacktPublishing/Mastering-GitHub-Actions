@@ -1,0 +1,26 @@
+{
+  "bound_audiences": [
+    "YOUR-ORG-runner"
+  ],
+  "bound_claims": {
+    "job_workflow_ref": "YOUR_ORG/GHA.Private.Templates/.github/workflows/gha.workflows.build-node.yml@refs/heads/main",
+    "repository_owner": "YOUR_ORG"
+  },
+  "bound_claims_type": "glob",
+  "claim_mappings": {
+    "actor": "Accessor"
+  },
+  "role_type": "jwt",
+  "token_max_ttl": 600,
+  "token_no_default_policy": true,
+  "token_num_uses": 1,
+  "token_period": 0,
+  "token_policies": [
+    "actions-communications"
+  ],
+  "token_ttl": "5m",
+  "token_type": "service",
+  "user_claim": "repository",
+  "user_claim_json_pointer": true,
+  "verbose_oidc_logging": true
+}
