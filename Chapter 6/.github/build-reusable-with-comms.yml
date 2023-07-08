@@ -1,0 +1,14 @@
+name: Node.js CI - reusable with notification
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  ci:
+    name: My Build Pipeline
+    permissions:
+      id-token: write
+      contents: write
+    uses: YOUR_ORG/GHA.Private.Templates/.github/workflows/gha.workflows.build-node.yml@main
+    with:
+      hashicorp_audience: "YOUR-ORG-runner"
