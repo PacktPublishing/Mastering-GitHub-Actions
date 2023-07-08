@@ -1,0 +1,63 @@
+name: Node.js CI - With Notification
+
+on:
+  workflow_call:
+    inputs:
+      hashicorp_audience:
+        type: string
+        description: the audience for HashiCorp access request
+        default: YOUR-ORG-runner
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - uses: ./.github/actions/build-node
+    - uses: actions/upload-artifact@v3
+      with:
+        name: my-app
+        path: dist/
+        retention-days: 1
+
+  communicate:
+    runs-on: ubuntu-latest
+    needs: [ "build" ]
+    permissions:
+      contents: read
+      id-token: write
+    if: always()
+    steps:    
+    - name: Import Secrets
+      id: import-secrets
+      uses: hashicorp/vault-action@v2
+      with:
+        url: YOUR_VAULT_URL_HERE
+        method: jwt
+        namespace: admin
+        role: gha-communication-runner
+        jwtGithubAudience: ${{ inputs.hashicorp_audience }}
+        exportEnv: true
+        secrets: |
+            secret/data/actions/gha/communication slack-build-api-token | SLACK_WEBHOOK_URL ;
+    - name: Send custom JSON data to Slack workflow
+      id: slack
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "text": "GitHub Action build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}",
+            "blocks": [
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "GitHub Action build result: ${{ job.status }}\n${{ github.event.pull_request.html_url || github.event.head_commit.url }}"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
