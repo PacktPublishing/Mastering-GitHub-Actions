@@ -10,4 +10,4 @@ on:
 jobs:
   ci:
     name: Deployment
-    uses: JediSchools/GHA.Jedi.Templates/.github/workflows/gha.workflows.build-node.yml@main
+    uses: OUR_ORG/GHA.Templates/.github/workflows/gha.workflows.build-node.yml@main
