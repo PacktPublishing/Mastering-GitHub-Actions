@@ -3,8 +3,8 @@
     "YOUR-ORG-runner"
   ],
   "bound_claims": {
-    "job_workflow_ref": "YOUR_ORG/GHA.Private.Templates/.github/workflows/gha.workflows.build-node.yml@refs/heads/main",
-    "repository_owner": "YOUR_ORG"
+    "job_workflow_ref": "YOUR-ORG/GHA.Private.Templates/.github/workflows/gha.workflows.build-node.yml@refs/heads/main",
+    "repository_owner": "YOUR-ORG"
   },
   "bound_claims_type": "glob",
   "claim_mappings": {
