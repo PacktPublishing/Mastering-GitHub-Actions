@@ -1,0 +1,52 @@
+- name: Send custom JSON data to Slack workflow
+  uses: slackapi/slack-github-action@v1.24.0
+  with:
+    payload: |
+          {
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "${{ github.workflow }} workflow invoked",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Organisation:*\n<${{ github.event.repository.owner.html_url }}|${{ github.event.repository.owner.login }}>"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.name}}>"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Event:*\n${{ github.event_name }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Actor:*\n<${{ github.event.sender.html_url }}|${{ github.event.sender.login }}>"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "<${{ github.event.pull_request.html_url || github.event.head_commit.url }}|View Commit>"
+                }
+              }
+            ]
+          }
+  env:
+    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
