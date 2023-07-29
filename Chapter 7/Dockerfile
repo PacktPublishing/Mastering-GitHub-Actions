@@ -11,7 +11,7 @@ COPY package.json ./
 RUN npm install
 
 # Copy the index.js file from the host's dist directory to the container
-COPY dist/* .
+COPY dist/* ./
 
 # Specify the command to run the Node.js application
 CMD ["node", "index.js"]
