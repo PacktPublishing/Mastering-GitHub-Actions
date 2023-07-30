@@ -1,0 +1,38 @@
+name: build node app
+description: "builds the node application - the jedi way"
+inputs:
+  artifactName:
+    description: is the name of the artifact
+    required: false
+    default: my-app
+runs:
+  using: "composite"
+  steps:
+    - name: Restore Cache
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-npm-
+    - name: Use Node.js 16.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16.x
+        cache: 'npm'
+    - name: run build
+      run: npm ci
+      shell: bash
+    - run: npm run build --if-present    
+      shell: bash
+    - name: Save Cache    
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-npm-${{ hashFiles('**/package-lock.json') }}
+    - uses: actions/upload-artifact@v3
+      with:
+        name: ${{ inputs.artifactName }}
+        path: dist/

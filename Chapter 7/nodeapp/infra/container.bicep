@@ -58,7 +58,7 @@ resource aci 'Microsoft.ContainerInstance/containerGroups@2022-09-01' = {
     imageRegistryCredentials: [
       {
         server: '${acrName}.azurecr.io'
-        username: acrName
+        username: acr.listCredentials().username
         password: acr.listCredentials().passwords[0].value
       }
     ]

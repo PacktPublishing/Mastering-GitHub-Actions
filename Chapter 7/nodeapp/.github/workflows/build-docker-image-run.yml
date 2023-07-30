@@ -4,6 +4,8 @@ on:
   workflow_dispatch:
   push:
 
+run-name: Build and deploy to ACI by @${{ github.actor }}
+
 env:
   artifact-name: my-app
   resource-group: xxxxxxx-rg
