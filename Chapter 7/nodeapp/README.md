@@ -79,9 +79,9 @@ Please ensure you have set up the appropriate secrets or environment variables f
 
 You can use any text editor or IDE of your choice to work on the function app. The main files and directories you need to focus on are:
 
-- `src/index.js`: Contains the function logic.
+- `index.js`: Contains the function logic.
 - `webpack.config.js`: Webpack configuration for bundling the app.
-- `bicep/`: Contains the Bicep files for infrastructure deployment.
+- `infra/`: Contains the Bicep files for infrastructure deployment.
 
 ## Testing
 

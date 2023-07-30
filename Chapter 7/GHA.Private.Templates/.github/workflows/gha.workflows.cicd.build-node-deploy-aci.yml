@@ -1,0 +1,97 @@
+name: Node.js Build with docker to aci
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        type: string
+        description: the name of the image
+        required: true
+      resource-group:
+        type: string
+        description: the name of the resource group
+        required: true
+      acr-registry:
+        type: string
+        description: the name of the acr registry
+        required: true
+      tag:
+        type: string
+        description: the tag of the image
+        required: false
+        default: latest
+      artifact-name:
+        type: string
+        description: the name of the artifact
+        required: false
+        default: my-app
+      dockerfile:
+        type: string
+        description: the name of the docker file
+        required: false
+        default: Dockerfile
+    secrets:
+      AZURE_CREDENTIALS:
+          required: true
+
+run-name: Build and deploy to ACI by @${{ github.actor }}
+
+jobs:
+  build:
+    name: Build Node.js application
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - uses: ./.github/actions/build-node
+      with:
+        artifactName: ${{ inputs.artifact-name }}
+        nodeVersion: 16.x
+
+  build-docker:
+    name: Build Docker Image with ACR
+    runs-on: ubuntu-latest
+    needs: build
+    outputs:
+      image-name: ${{ steps.acr-build.outputs.image-ref }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/download-artifact@v3
+      with:
+        name:  ${{ inputs.artifact-name }}
+        path: dist
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: ACR Build
+      id: acr-build
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          echo "image-tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          echo "Using tags ${{ inputs.tag }}"
+          echo "image-ref=${{ inputs.acr-registry }}.azurecr.io/${{ inputs.image-name }}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          az acr build -r ${{ inputs.acr-registry }} -f ${{ inputs.dockerfile }} -t "${{ inputs.image-name }}:${{ inputs.tag }}" ./
+
+  deploy-container-instance:
+    name: Deploy to ACI
+    runs-on: ubuntu-latest
+    needs: build-docker
+    steps:
+    - uses: actions/checkout@v3
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: ACI Build and Push
+      id: aci
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          cd infra
+          guidLowerDashed=$(cat /proc/sys/kernel/random/uuid)
+          guidLower=${guidLowerDashed//"-"/""}
+          deploy_name="${GITHUB_REPOSITORY#*/}_$guidLower"
+          deployment=$(az deployment group create --name $deploy_name --resource-group ${{ env.resource-group }} --template-file main.bicep --parameters image=${{ needs.build-docker.outputs.image-name }} acrName=${{ env.acr-registry }} --query properties.outputs)
+          
+          ipValue=$(echo "$deployment" | jq -r '.containerIp.value')
+          echo "You can access the container [here](http:\/\/$ipValue\/)" >> $GITHUB_STEP_SUMMARY
