@@ -20,6 +20,11 @@ on:
         description: the name of the acr registry
         default: false
         required: false
+      githubTokenAudience:
+        type: string
+        description: set a custom audience for your identity token
+        required: false
+        default: api://AzureADTokenExchange
       tag:
         type: string
         description: the tag of the image
@@ -78,6 +83,7 @@ jobs:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        audience: ${{ inputs.githubTokenAudience }}
     - name: login with credentials 
       uses: azure/login@v1
       if: ${{ inputs.oidc-login == false}}
@@ -106,6 +112,7 @@ jobs:
         client-id: ${{ secrets.AZURE_CLIENT_ID }}
         tenant-id: ${{ secrets.AZURE_TENANT_ID }}
         subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        audience: ${{ inputs.githubTokenAudience }}
     - name: login with credentials 
       uses: azure/login@v1
       if: ${{ inputs.oidc-login == false}}
