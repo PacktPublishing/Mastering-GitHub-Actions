@@ -1,4 +1,4 @@
-name: Node.js Build with docker to aci
+name: Node.js Build with docker to aci with OIDC
 
 on:
   workflow_call:
