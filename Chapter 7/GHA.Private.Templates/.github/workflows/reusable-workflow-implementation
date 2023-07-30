@@ -1,0 +1,17 @@
+name: Node.js Build with docker - reusable
+
+on:
+  workflow_dispatch:
+  push:
+
+run-name: (REUSABLE) Build and deploy to ACI by @${{ github.actor }}
+
+jobs:
+  ci-cd:
+    uses: YOUR_ORG/GHA.Private.Templates/.github/workflows/gha.workflows.cicd.build-node-deploy-aci.yml@main
+    with:
+      resource-group: <YOUR-RG>
+      acr-registry: <YOUR_ACR>
+      image-name: counterfunction
+    secrets:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
