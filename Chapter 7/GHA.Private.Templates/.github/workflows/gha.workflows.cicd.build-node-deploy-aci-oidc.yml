@@ -45,7 +45,7 @@ on:
       AZURE_SUBSCRIPTION_ID:
         required: false
 
-run-name: Build and deploy to ACI by @${{ github.actor }}
+run-name: Build and deploy to ACI by @${{ github.actor }} with OIDC
 
 jobs:
   build:
