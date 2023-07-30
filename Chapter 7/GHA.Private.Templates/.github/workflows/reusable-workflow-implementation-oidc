@@ -1,0 +1,25 @@
+name: Node.js Build with docker - reusable with OIDC
+
+on:
+  workflow_dispatch:
+  push:
+
+run-name: (REUSABLE) Build and deploy to ACI by @${{ github.actor }} with OIDC
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  ci-cd:
+    uses: <YOUR_ORG>/GHA.Private.Templates/.github/workflows/gha.workflows.cicd.build-node-deploy-aci-oidc.yml@main
+    with:
+      resource-group: <YOUR_RG>
+      acr-registry: <YOUR_ACR>
+      image-name: counterfunction
+      oidc-login: true
+      githubTokenAudience: api://<YOUR_ORG>.CounterFunctionApp
+    secrets:
+      AZURE_CLIENT_ID:  ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_TENANT_ID:  ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
