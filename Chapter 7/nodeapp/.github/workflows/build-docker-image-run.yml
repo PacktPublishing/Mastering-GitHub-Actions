@@ -14,6 +14,7 @@ env:
 
 jobs:
   build:
+    name: Build Node.js application
     runs-on: ubuntu-latest
     steps:
     - name: checkout code
@@ -23,6 +24,7 @@ jobs:
         artifactName: ${{env.artifact-name}}
 
   build-docker:
+    name: Build Docker Image with ACR
     runs-on: ubuntu-latest
     needs: build
     outputs:
@@ -47,6 +49,7 @@ jobs:
           az acr build -r ${{ env.acr-registry }} -f ${{ env.dockerfile }} -t "${{ env.image-name }}:${{ env.tag }}" ./
 
   deploy-container-instance:
+    name: Deploy to ACI
     runs-on: ubuntu-latest
     needs: build-docker
     steps:
@@ -63,5 +66,7 @@ jobs:
           guidLowerDashed=$(cat /proc/sys/kernel/random/uuid)
           guidLower=${guidLowerDashed//"-"/""}
           deploy_name="${GITHUB_REPOSITORY#*/}_$guidLower"
-          az deployment group create --name $deploy_name --resource-group ${{ env.resource-group }} --template-file main.bicep --parameters image=${{ needs.build-docker.outputs.image-name }} acrName=${{ env.acr-registry }}
-    
+          deployment=$(az deployment group create --name $deploy_name --resource-group ${{ env.resource-group }} --template-file main.bicep --parameters image=${{ needs.build-docker.outputs.image-name }} acrName=${{ env.acr-registry }} --query properties.outputs)
+          
+          ipValue=$(echo "$deployment" | jq -r '.containerIp.value')
+          echo "You can access the container [here](http:\/\/$ipValue\/)" >> $GITHUB_STEP_SUMMARY
