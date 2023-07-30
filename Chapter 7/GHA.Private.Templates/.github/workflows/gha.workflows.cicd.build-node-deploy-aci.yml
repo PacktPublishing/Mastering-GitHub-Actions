@@ -91,7 +91,7 @@ jobs:
           guidLowerDashed=$(cat /proc/sys/kernel/random/uuid)
           guidLower=${guidLowerDashed//"-"/""}
           deploy_name="${GITHUB_REPOSITORY#*/}_$guidLower"
-          deployment=$(az deployment group create --name $deploy_name --resource-group ${{ env.resource-group }} --template-file main.bicep --parameters image=${{ needs.build-docker.outputs.image-name }} acrName=${{ env.acr-registry }} --query properties.outputs)
+          deployment=$(az deployment group create --name $deploy_name --resource-group ${{ inputs.resource-group }} --template-file main.bicep --parameters image=${{ needs.build-docker.outputs.image-name }} acrName=${{ inputs.acr-registry }} --query properties.outputs)
           
           ipValue=$(echo "$deployment" | jq -r '.containerIp.value')
           echo "You can access the container [here](http:\/\/$ipValue\/)" >> $GITHUB_STEP_SUMMARY
