@@ -1,0 +1,65 @@
+name: create a check in a steps
+
+on:
+  pull_request:
+
+permissions:
+  checks: write
+
+jobs:
+  pull_request_job:
+    name: run on pull request
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: step to create a check in_progress
+        uses: actions/github-script@v6
+        id: create-check
+        with:
+          result-encoding: string
+          script: |
+            const checkStatus = "in_progress";
+            const commitSha = "${{ github.event.pull_request.head.sha }}";
+            // Create the check
+            const check = await github.rest.checks.create({
+              owner: process.env.GITHUB_REPOSITORY.split('/')[0],
+              repo: process.env.GITHUB_REPOSITORY.split('/')[1],
+              name: "My first check",
+              head_sha: commitSha,
+              status: "in_progress",
+              output: {
+                title: "Check passed",
+                summary: "Everything is okay",
+                text: "You can put text in here"
+              }
+            });
+            console.log(`In progress check created with ID: ${check.data.id}`);
+            return check.data.id
+      - name: step to create check completed
+        uses: actions/github-script@v6
+        id: create-check-completed
+        with:
+          result-encoding: string
+          script: |
+            const checkStatus = "completed";
+            const commitSha = "${{ github.event.pull_request.head.sha }}";            
+            // Create the check with an image
+            const check = await github.rest.checks.create({
+              owner: process.env.GITHUB_REPOSITORY.split('/')[0],
+              repo: process.env.GITHUB_REPOSITORY.split('/')[1],
+              name: "My second check",
+              head_sha: commitSha,
+              status: checkStatus,
+              conclusion: "success",
+              output: {
+                title: "Check passed",
+                summary: "Everything is okay",
+                text: "You can put text in here",
+                images: [{
+                  alt: "green tick",
+                  image_url: "https://upload.wikimedia.org/wikipedia/commons/0/08/Check-mark.png"
+                }]
+              }
+            });
+            console.log(`Completed check created with ID: ${check.data.id}`);
+            return check.data.id
