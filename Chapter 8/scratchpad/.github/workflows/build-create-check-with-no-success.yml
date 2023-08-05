@@ -1,0 +1,80 @@
+name: create a check in a steps with no success
+
+on:
+  pull_request:
+
+permissions:
+  checks: write
+
+jobs:
+  pull_request_job:
+    name: run on pull request
+    runs-on: ubuntu-latest
+    steps:
+      - name: step to create a check in_progress
+        uses: actions/github-script@v6
+        id: create-check
+        with:
+          result-encoding: string
+          script: |
+            const checkStatus = "in_progress";
+            const commitSha = "${{ github.event.pull_request.head.sha }}";
+            // Create the check
+            const check = await github.rest.checks.create({
+              owner: process.env.GITHUB_REPOSITORY.split('/')[0],
+              repo: process.env.GITHUB_REPOSITORY.split('/')[1],
+              name: "I'll never pass - time out",
+              head_sha: commitSha,
+              status: "in_progress",
+              output: {
+                title: "Check running",
+                summary: "Everything is okay so far",
+                text: "Created"
+              }
+            });
+            return check.data.id;
+      - name: step to create a check failed
+        uses: actions/github-script@v6
+        id: create-check-failed
+        with:
+          result-encoding: string
+          script: |
+            const commitSha = "${{ github.event.pull_request.head.sha }}";
+            // Create the check
+            await github.rest.checks.create({
+              owner: process.env.GITHUB_REPOSITORY.split('/')[0],
+              repo: process.env.GITHUB_REPOSITORY.split('/')[1],
+              name: "I'll never pass - failed",
+              head_sha: commitSha,
+              status: "completed",
+              conclusion: "failure",
+              output: {
+                title: "Check running",
+                summary: "Everything is not okay",
+                text: "Terrible failure occurred"
+              }
+            });
+      - run: sleep 30
+
+      - name: step to update a check to timed out
+        uses: actions/github-script@v6
+        id: update-check-timed-out
+        with:
+          result-encoding: string
+          script: |
+            const commitSha = "${{ github.event.pull_request.head.sha }}";
+            // update the check to timed out
+            await github.rest.checks.update({
+              owner: process.env.GITHUB_REPOSITORY.split('/')[0],
+              repo: process.env.GITHUB_REPOSITORY.split('/')[1],
+              check_run_id: ${{ steps.create-check.outputs.result }},
+              name: "I'll never pass - time out",
+              head_sha: commitSha,
+              status: "completed",
+              conclusion: "timed_out",
+              output: {
+                title: "Check timed out",
+                summary: "Everything is not okay",
+                text: "Took too long to complete"
+              }
+            });
