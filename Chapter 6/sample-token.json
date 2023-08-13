@@ -1,0 +1,37 @@
+{ 
+  "typ": "JWT", 
+  "alg": "RS256", 
+  "x5t": "eBZ_cn3sXYAd0ch4THBKHIgOwOE", 
+  "kid": "78167F727DEC5D801DD1C8784C704A1C880EC0E1" 
+} 
+{ 
+  "jti": "3af6cc52-0a02-4c25-bf23-056392aa3149", 
+  "sub": "repo:JediSchools/scratchpad:ref:refs/heads/main", 
+  "aud": "https://github.com/JediSchools", 
+  "ref": "refs/heads/main", 
+  "sha": "1555afc2c43789d01bb3ecfdd42c46101c087f90", 
+  "repository": "JediSchools/scratchpad", 
+  "repository_owner": "JediSchools", 
+  "repository_owner_id": "132177270", 
+  "run_id": "5363099027", 
+  "run_number": "5", 
+  "run_attempt": "1", 
+  "repository_visibility": "private", 
+  "repository_id": "637307364", 
+  "actor_id": "132116407", 
+  "actor": "1GithubPadawan", 
+  "workflow": "test", 
+  "head_ref": "", 
+  "base_ref": "", 
+  "event_name": "workflow_dispatch", 
+  "ref_type": "branch", 
+  "workflow_ref": "JediSchools/scratchpad/.github/workflows/main.yml@refs/heads/main", 
+  "workflow_sha": "1555afc2c43789d01bb3ecfdd42c46101c087f90", 
+  "job_workflow_ref": "JediSchools/scratchpad/.github/workflows/main.yml@refs/heads/main", 
+  "job_workflow_sha": "1555afc2c43789d01bb3ecfdd42c46101c087f90", 
+  "runner_environment": "github-hosted", 
+  "iss": "https://token.actions.githubusercontent.com", 
+  "nbf": 1687589236, 
+  "exp": 1687590136, 
+  "iat": 1687589836 
+} 
