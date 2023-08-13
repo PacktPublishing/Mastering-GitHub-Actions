@@ -1,0 +1,48 @@
+name: 'Create a Rich Check'
+description: "Rich checks from GitHub Mastery Book"
+inputs:
+  name:
+    description: 'The name of the check'
+    required: true
+  status:
+    description: 'the status of the check `queued`, `in_progress` or `completed`'
+    required: true
+  title:
+    description: 'the title to put on the check panel'
+    required: true
+  summary:
+    description: 'The summary of the check runs current result'
+    required: true
+  details:
+    description: 'The details for the check'
+    required: false
+
+outputs:
+  check_run_id:
+    description: 'contains the check run id of the check created '
+    value: ${{ steps.check.outputs.result }}
+
+runs:
+  using: "composite"
+  steps:
+  - name: step to create check completed
+    uses: actions/github-script@v6
+    id: check
+    with:
+      return-encoding: string
+      script: |
+        let body = {
+          owner: process.env.GITHUB_REPOSITORY.split('/')[0],
+          repo: process.env.GITHUB_REPOSITORY.split('/')[1],
+          name: ${{ inputs.name || github.event.repository.name }},
+          head_sha: process.env.GITHUB_SHA,
+          status: ${{ inputs.status }},
+          output: {
+            title: ${{ inputs.title }},
+            summary: ${{ inputs.summary }},
+            text: ${{ inputs.details }}
+          }
+        };
+
+        const check = await github.rest.checks.create(body);
+        return check.data.id
