@@ -135,7 +135,7 @@ jobs:
       uses: JediSchools/RichChecks@0.1
       with:
         name: "Deployed Artefact"
-        description: "The deployed resources"
+        status: "completed"
         title: "Deployment Result"
         summary: "Successful deployment"
         details: "You can access the container [here](http://${{ steps.aci.outputs.ip}}/)"
