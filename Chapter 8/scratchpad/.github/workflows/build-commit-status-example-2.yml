@@ -1,0 +1,77 @@
+name: Commit Statuses Workflow
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  statuses: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+    - name: Set commit status to pending
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const { owner, repo } = context.repo;
+          const sha = context.sha;
+          let state = "pending";
+          await github.rest.repos.createCommitStatus({
+            owner,
+            repo,
+            sha,
+            state,
+            context: "ci/test"
+          });
+    - name: Run tests
+      run: |
+        # Your testing commands here
+        npm install
+        npm test
+
+    # This step will only run if the previous step ("Run tests") succeeds
+    - name: Set commit status to success
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const { owner, repo } = context.repo;
+          const sha = context.sha;
+          let state = "success";
+          let description = "Tests passed successfully!";
+          await github.rest.repos.createCommitStatus({
+            owner,
+            repo,
+            sha,
+            state,
+            description,
+            context: "ci/test"
+          });
+    # This step will only run if the previous step ("Run tests") fails
+    - name: Set commit status to failure
+      if: failure()
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const { owner, repo } = context.repo;
+          const sha = context.sha;
+          let state = "failure";
+          let description = "Tests failed. Check the logs for more details.";
+          await github.rest.repos.createCommitStatus({
+            owner,
+            repo,
+            sha,
+            state,
+            description,
+            context: "ci/test"
+            target_url: "https://guardian.jedischools.com"
+          });
