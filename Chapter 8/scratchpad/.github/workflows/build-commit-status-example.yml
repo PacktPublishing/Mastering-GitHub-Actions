@@ -1,0 +1,42 @@
+name: Commit Statuses Workflow
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  statuses: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out code
+      uses: actions/checkout@v3
+    - uses: ouzi-dev/commit-status-updater@v2
+      with:
+        name: "ci/test"
+    - name: Run tests
+      run: |
+        # Your testing commands here
+        npm install
+        npm test
+    # This step will only run if the previous step ("Run tests") succeeds
+    - name: Set commit status to success
+      if: success()
+      uses: ouzi-dev/commit-status-updater@v2
+      with:
+        status: "${{ job.status }}"
+        name: "ci/test"
+        description: "Tests passed successfully!"
+    # This step will only run if the previous step ("Run tests") fails
+    - name: Set commit status to failure
+      if: failure()
+      uses: ouzi-dev/commit-status-updater@v2
+      with:
+        status: "${{ job.status }}"
+        name: "ci/test"
+        description: "Tests failed. Check the logs for more details."
+        url: "https://guardian.jedischools.com"
