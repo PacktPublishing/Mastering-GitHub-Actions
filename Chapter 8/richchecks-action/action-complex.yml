@@ -19,12 +19,18 @@ inputs:
   conclusion:
     description: 'The conclusion of the check as a value of `action_required`, `cancelled`, `failure`, `neutral`, `success`, `skipped`, `stale`, and `timed_out`'
     required: false
-  check_run_id:
+  check-run-id:
     description: 'If set, this check run will be updated with the conclusion and details provided'
     required: false
-  github_token:
+  github-token:
     description: 'Github token used by the api requests for the repository (automatically created by Github)'
     default: ${{ github.token }}
+    required: false
+  fail-on-error:
+    description: 'step will fail if specified `conclusion` is not `success` or `neutral`'
+    required: false
+  fail-on-neutral:
+    description: 'step will fail if specified `conclusion` is `neutral`'
     required: false
 
 branding:
@@ -32,32 +38,36 @@ branding:
   color: 'green'
 
 outputs:
-  check_run_id:
+  check-run-id:
     description: 'contains the check run id of the check created or updated'
-    value: ${{ steps.create_check.outputs.result || steps.update_check.outputs.result }}
+    value: ${{ steps.create-check.outputs.result || steps.update-check.outputs.result }}
 
 runs:
   using: "composite"
   steps:
   - name: Set to update to completed
-    if: ${{ inputs.check_run_id != null }}
-    id: update_check
+    if: ${{ inputs.check-run-id != null }}
+    id: update-check
     uses: actions/github-script@v6
     with:
       result-encoding: string
-      github-token: ${{ inputs.github_token }}
+      github-token: ${{ inputs.github-token }}
       script: |
         const commitSha = "${{ github.event.pull_request.head.sha || github.sha }}";
         const owner = process.env.GITHUB_REPOSITORY.split('/')[0];
         const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
         const name = "${{ inputs.name || github.event.repository.name }}";
+        const conclusion = "${{ inputs.conclusion }}".trim();
+        const shouldFailForNeutral = ("${{ inputs.fail-on-neutral }}" === "true");
+        const shouldFailForNonSuccess = ("${{ inputs.fail-on-error }}" === "true");
+        const successStates = ["neutral", "success"];
         
         let body = {
           owner,
           repo,
           name,
           head_sha: commitSha,
-          check_run_id: "${{ inputs.check_run_id }}",
+          check_run_id: "${{ inputs.check-run-id }}",
           status: "${{ inputs.status }}",
           output: {
             title: "${{ inputs.title }}",
@@ -65,25 +75,39 @@ runs:
             text: "${{ inputs.details }}"
           }
         };
+        
         if("${{ inputs.conclusion }}" !== ""){
           body.conclusion = "${{ inputs.conclusion }}";
+        }
+
+        if(conclusion !== ""){
+          if(shouldFailForNonSuccess && !successStates.includes(conclusion)){
+            core.setFailed("check failed for non successive state");
+          }
+          if(shouldFailForNeutral && conclusion == "neutral"){
+            core.setFailed("check failed for non successive state");
+          }
         }
 
         // update the check
         const check = await github.rest.checks.update(body);
         return check.data.id
   - name: step to create
-    if: ${{ inputs.check_run_id == null }}
-    id: create_check
+    if: ${{ inputs.check-run-id == null }}
+    id: create-check
     uses: actions/github-script@v6
     with:
       result-encoding: string
-      github-token: ${{ inputs.github_token }}
+      github-token: ${{ inputs.github-token }}
       script: |
         const commitSha = "${{ github.event.pull_request.head.sha || github.sha }}";
         const owner = process.env.GITHUB_REPOSITORY.split('/')[0];
         const repo = process.env.GITHUB_REPOSITORY.split('/')[1];
         const name = "${{ inputs.name || github.event.repository.name }}";
+        const conclusion = "${{ inputs.conclusion }}".trim();
+        const shouldFailForNeutral = ("${{ inputs.fail-on-neutral }}" === "true");
+        const shouldFailForNonSuccess = ("${{ inputs.fail-on-error }}" === "true");
+        const successStates = ["neutral", "success"];
         
         let body = {
           owner,
@@ -97,8 +121,18 @@ runs:
             text: "${{ inputs.details }}"
           }
         };
+        
         if("${{ inputs.conclusion }}" !== ""){
           body.conclusion = "${{ inputs.conclusion }}";
+        }
+
+        if(conclusion !== ""){
+          if(shouldFailForNonSuccess && !successStates.includes(conclusion)){
+            core.setFailed("check failed for non successive state");
+          }
+          if(shouldFailForNeutral && conclusion == "neutral"){
+            core.setFailed("check failed for non successive state");
+          }
         }
 
         // Create the check
