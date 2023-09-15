@@ -1,0 +1,25 @@
+name: workflow to test with act locally
+
+on:
+  pull_request:
+    
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+      
+    - name: Run My Custom Action
+      uses: ./
+      with:
+          name: "test Artefact"
+          status: "completed"
+          title: "Deployment Result"
+          summary: "Successful deployment"
+          details: "hiiii"
+          conclusion: 'neutral'
+          annotations: |
+            [{"path": "README.md","annotation_level": "warning","title": "Spell Checker","message": "Check your spelling for 'banaas'.","raw_details": "Do you mean 'bananas' or 'banana'?","start_line": 2,"end_line": 2},{"path": "README.md","annotation_level": "warning","title": "Spell Checker","message": "Check your spelling for 'aples'","raw_details": "Do you mean 'apples' or 'Naples'","start_line": 4,"end_line": 4}]
+          fail-on-error: true
+          fail-on-neutral: true

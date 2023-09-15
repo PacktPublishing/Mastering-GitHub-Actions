@@ -1,0 +1,53 @@
+name: 'Update/Create a Rich Check'
+description: "Rich checks from GitHub Mastery Book"
+author: "JediSchools"
+inputs:
+  name:
+    description: 'The name of the check'
+    required: true
+  status:
+    description: 'The status of the check `queued`, `in_progress` or `completed`'
+    required: true
+  title:
+    description: 'The title to put on the check panel'
+    required: true
+  summary:
+    description: 'The summary of the check runs current result'
+    required: true
+  details:
+    description: 'The details for the check'
+    required: false
+  conclusion:
+    description: 'The conclusion of the check as a value of `action_required`, `cancelled`, `failure`, `neutral`, `success`, `skipped`, `stale`, and `timed_out`'
+    required: false
+  check-run-id:
+    description: 'If set, this check run will be updated with the conclusion and details provided'
+    required: false
+  github-token:
+    description: 'Github token used by the api requests for the repository (automatically created by Github)'
+    default: ${{ github.token }}
+    required: false
+  annotations:
+    description: 'the annotations of your check(JSON Object)'
+    required: false
+  images:
+    description: 'add images to your check(JSON Object)'
+    required: false
+  fail-on-error:
+    description: 'step will fail if specified `conclusion` is not `success` or `neutral`'
+    required: false
+  fail-on-neutral:
+    description: 'step will fail if specified `conclusion` is `neutral`'
+    required: false
+
+branding:
+  icon: 'check-circle'
+  color: 'green' 
+
+outputs:
+  check-run-id:
+    description: 'contains the check run id of the check created or updated'
+
+runs:
+  using: "node16"
+  main: "dist/index.js"

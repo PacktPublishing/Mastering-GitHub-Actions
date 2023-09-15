@@ -1,0 +1,39 @@
+{
+  "name": "richchecks",
+  "version": "1.0.0",
+  "description": "rick checks within actions",
+  "main": "index.js",
+  "dependencies": {
+    "@actions/core": "^1.10.1",
+    "@actions/github": "^5.1.1",
+    "@octokit/plugin-retry": "^6.0.0",
+    "@octokit/plugin-throttling": "^7.0.0"
+  },
+  "devDependencies": {
+    "copy-webpack-plugin": "^11.0.0",
+    "eslint": "^8.49.0",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "build": "webpack",
+    "test": "webpack && act -j test",
+    "all": "npm run lint && npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/JediSchools/RichChecks.git"
+  },
+  "keywords": [
+    "GitHub",
+    "Actions",
+    "JavaScript"
+  ],
+  "author": "JediSchools",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/JediSchools/RichChecks/issues"
+  },
+  "homepage": "https://github.com/JediSchools/RichChecks#readme"
+}
