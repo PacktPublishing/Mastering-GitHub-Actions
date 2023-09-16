@@ -1,0 +1,257 @@
+{
+    "check_type": "dockerfile",
+    "results": {
+        "failed_checks": [
+            {
+                "check_id": "CKV_DOCKER_2",
+                "bc_check_id": "BC_DKR_2",
+                "check_name": "Ensure that HEALTHCHECK instructions have been added to container images",
+                "check_result": {
+                    "result": "FAILED",
+                    "results_configuration": null
+                },
+                "code_block": [
+                    [
+                        1,
+                        "# Use the official Node.js base image\n"
+                    ],
+                    [
+                        2,
+                        "FROM node:14\n"
+                    ],
+                    [
+                        3,
+                        "\n"
+                    ],
+                    [
+                        4,
+                        "# Create a working directory inside the container\n"
+                    ],
+                    [
+                        5,
+                        "WORKDIR /app\n"
+                    ],
+                    [
+                        6,
+                        "\n"
+                    ],
+                    [
+                        7,
+                        "# Copy the package.json and package-lock.json files to the container\n"
+                    ],
+                    [
+                        8,
+                        "COPY package.json ./\n"
+                    ],
+                    [
+                        9,
+                        "\n"
+                    ],
+                    [
+                        10,
+                        "# Install dependencies\n"
+                    ],
+                    [
+                        11,
+                        "RUN npm install\n"
+                    ],
+                    [
+                        12,
+                        "\n"
+                    ],
+                    [
+                        13,
+                        "# Copy the index.js file from the host's dist directory to the container\n"
+                    ],
+                    [
+                        14,
+                        "COPY dist/* ./\n"
+                    ],
+                    [
+                        15,
+                        "\n"
+                    ],
+                    [
+                        16,
+                        "# Open port 80\n"
+                    ],
+                    [
+                        17,
+                        "ENV PORT=80\n"
+                    ],
+                    [
+                        18,
+                        "EXPOSE 80\n"
+                    ],
+                    [
+                        19,
+                        "\n"
+                    ],
+                    [
+                        20,
+                        "# Specify the command to run the Node.js application\n"
+                    ],
+                    [
+                        21,
+                        "CMD [\"node\", \"index.js\"]"
+                    ]
+                ],
+                "file_path": "/Dockerfile",
+                "file_abs_path": "/github/workspace/Dockerfile",
+                "repo_file_path": "/Dockerfile",
+                "file_line_range": [
+                    1,
+                    21
+                ],
+                "resource": "/Dockerfile.",
+                "evaluations": null,
+                "check_class": "checkov.dockerfile.checks.HealthcheckExists",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.paloaltonetworks.com/content/techdocs/en_US/prisma/prisma-cloud/prisma-cloud-code-security-policy-reference/docker-policies/docker-policy-index/ensure-that-healthcheck-instructions-have-been-added-to-container-images.html",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": null
+            },
+            {
+                "check_id": "CKV_DOCKER_3",
+                "bc_check_id": "BC_DKR_3",
+                "check_name": "Ensure that a user for the container has been created",
+                "check_result": {
+                    "result": "FAILED",
+                    "results_configuration": null
+                },
+                "code_block": [
+                    [
+                        1,
+                        "# Use the official Node.js base image\n"
+                    ],
+                    [
+                        2,
+                        "FROM node:14\n"
+                    ],
+                    [
+                        3,
+                        "\n"
+                    ],
+                    [
+                        4,
+                        "# Create a working directory inside the container\n"
+                    ],
+                    [
+                        5,
+                        "WORKDIR /app\n"
+                    ],
+                    [
+                        6,
+                        "\n"
+                    ],
+                    [
+                        7,
+                        "# Copy the package.json and package-lock.json files to the container\n"
+                    ],
+                    [
+                        8,
+                        "COPY package.json ./\n"
+                    ],
+                    [
+                        9,
+                        "\n"
+                    ],
+                    [
+                        10,
+                        "# Install dependencies\n"
+                    ],
+                    [
+                        11,
+                        "RUN npm install\n"
+                    ],
+                    [
+                        12,
+                        "\n"
+                    ],
+                    [
+                        13,
+                        "# Copy the index.js file from the host's dist directory to the container\n"
+                    ],
+                    [
+                        14,
+                        "COPY dist/* ./\n"
+                    ],
+                    [
+                        15,
+                        "\n"
+                    ],
+                    [
+                        16,
+                        "# Open port 80\n"
+                    ],
+                    [
+                        17,
+                        "ENV PORT=80\n"
+                    ],
+                    [
+                        18,
+                        "EXPOSE 80\n"
+                    ],
+                    [
+                        19,
+                        "\n"
+                    ],
+                    [
+                        20,
+                        "# Specify the command to run the Node.js application\n"
+                    ],
+                    [
+                        21,
+                        "CMD [\"node\", \"index.js\"]"
+                    ]
+                ],
+                "file_path": "/Dockerfile",
+                "file_abs_path": "/github/workspace/Dockerfile",
+                "repo_file_path": "/Dockerfile",
+                "file_line_range": [
+                    1,
+                    21
+                ],
+                "resource": "/Dockerfile.",
+                "evaluations": null,
+                "check_class": "checkov.dockerfile.checks.UserExists",
+                "fixed_definition": null,
+                "entity_tags": null,
+                "caller_file_path": null,
+                "caller_file_line_range": null,
+                "resource_address": null,
+                "severity": null,
+                "bc_category": null,
+                "benchmarks": null,
+                "description": null,
+                "short_description": null,
+                "vulnerability_details": null,
+                "connected_node": null,
+                "guideline": "https://docs.paloaltonetworks.com/content/techdocs/en_US/prisma/prisma-cloud/prisma-cloud-code-security-policy-reference/docker-policies/docker-policy-index/ensure-that-a-user-for-the-container-has-been-created.html",
+                "details": [],
+                "check_len": null,
+                "definition_context_file_path": null
+            }
+        ]
+    },
+    "summary": {
+        "passed": 28,
+        "failed": 2,
+        "skipped": 0,
+        "parsing_errors": 0,
+        "resource_count": 1,
+        "checkov_version": "2.4.39"
+    }
+}
