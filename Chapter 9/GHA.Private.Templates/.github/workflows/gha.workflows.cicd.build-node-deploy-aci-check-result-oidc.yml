@@ -1,0 +1,411 @@
+name: Node.js Build with docker to aci with OIDC
+
+on:
+  workflow_call:
+    inputs:
+      image-name:
+        type: string
+        description: the name of the image
+        required: true
+      resource-group:
+        type: string
+        description: the name of the resource group
+        required: true
+      acr-registry:
+        type: string
+        description: the name of the acr registry
+        required: true
+      oidc-login:
+        type: boolean
+        description: the name of the acr registry
+        default: false
+        required: false
+      githubTokenAudience:
+        type: string
+        description: set a custom audience for your identity token
+        required: false
+        default: api://AzureADTokenExchange
+      tag:
+        type: string
+        description: the tag of the image
+        required: false
+        default: latest
+      artifact-name:
+        type: string
+        description: the name of the artifact
+        required: false
+        default: my-app
+      dockerfile:
+        type: string
+        description: the name of the docker file
+        required: false
+        default: ./Dockerfile
+    secrets:
+      AZURE_CREDENTIALS:
+        required: false
+      AZURE_CLIENT_ID:
+        required: false
+      AZURE_TENANT_ID:
+        required: false
+      AZURE_SUBSCRIPTION_ID:
+        required: false
+
+run-name: Build and deploy to ACI by @${{ github.actor }} with OIDC
+
+jobs:
+  build-version-number:
+    name: Generate and tag build number
+    runs-on: ubuntu-latest
+    outputs: 
+      version: ${{ steps.get-version.outputs.version }}
+      non-semver-version: ${{ steps.get-non-semver-version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Git Semantic Version
+        id: get-version
+        uses: PaulHatch/semantic-version@v5.2.1
+      - name: create non semver version prefix
+        id: get-non-semver-version
+        run: |
+          SEMVER="${{ steps.get-version.outputs.version }}"
+          SEMVER=${SEMVER//"-"/"_"}
+          SEMVER=${SEMVER//"+"/"_"}
+          FULL="${GITHUB_REPOSITORY#*/}_$SEMVER"
+          echo "version=$FULL" >> "$GITHUB_OUTPUT"
+  
+  docker-lint-files:
+    name: Run docker linter
+    runs-on: ubuntu-latest
+    outputs:
+      dockerlintAnnotations: ${{ steps.get-annotations.outputs.result }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Hadolint Action - Run linter
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: ${{ inputs.dockerfile }}
+          recursive: true
+          failure-threshold: "warning"
+          output-file: "lint_findings.json"
+          format: json
+      - uses: actions/github-script@v6
+        name: morph results
+        id: get-annotations
+        if: always()
+        with:
+          result-encoding: string
+          script: |
+            const fs = require('fs');
+
+            // Reading results from a provided file
+            const data = fs.readFileSync('lint_findings.json', 'utf8');
+            // Parse to JSON
+            const results = JSON.parse(data);
+
+            // Mapping function
+            const mapToAnnotations = (results) => {
+                return results.map(result => {
+                    // custom map for annotations
+                    let annotation_level;
+                    switch (result.level) {
+                        case 'error':
+                            annotation_level = 'failure';
+                            break;
+                        case 'warning':
+                            annotation_level = 'warning';
+                            break;
+                        default:
+                            annotation_level = 'notice'; // Default to 'notice' for all others - style or info
+                    }
+                    return {
+                        path: result.file,
+                        start_line: result.line,
+                        end_line: result.line,
+                        annotation_level,
+                        title: result.code,
+                        message: result.message
+                    };
+                });
+            };
+            // call function
+            const annotations = mapToAnnotations(results);
+            // return but strigify it
+            return JSON.stringify(annotations);
+      - name: show results
+        if: always()
+        run: cat lint_findings.json
+        shell: bash
+  
+  dockerfile-security-scan:
+    name: Run docker security scan
+    runs-on: ubuntu-latest
+    outputs:
+      securityAnnotations: ${{ steps.get-annotations.outputs.result }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Checkov GitHub Action
+        id: checkov
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          # This will add both a CLI output to the console and create a results.sarif file
+          output_format: json
+          quiet: true
+      - name: Write results to file
+        if: always()
+        run: echo '${{ steps.checkov.outputs.checkov-result }}' > checkov_results.json
+      - uses: actions/github-script@v6
+        name: morph results
+        id: get-annotations
+        if: always()
+        with:
+          result-encoding: string
+          script: |
+            const jsonData = JSON.parse(process.env.CHECKOV_RESULTS);
+            const annotations = jsonData.results && jsonData.results.failed_checks.map(result => {
+                let annotationLevel;
+                switch(result.check_result.result) {
+                    case "FAILED":
+                        annotationLevel = "failure";
+                        break;
+                    case "PASSED":
+                        annotationLevel = "notice";
+                        break;
+                    default:
+                        annotationLevel = "warning";
+                }
+                
+                return {
+                    path: result.file_path,
+                    start_line: result.file_line_range[0],
+                    end_line: result.file_line_range[1],
+                    annotation_level: annotationLevel,
+                    message: `${result.check_name} \n Guideline: ${result.guideline}`,
+                    title: result.check_id,
+                    raw_details: JSON.stringify(result, null, 2)
+                };
+            });
+            return JSON.stringify(annotations);
+      - name: show results
+        if: always()
+        run: cat checkov_results.json
+        shell: bash
+
+  
+  infrastructure-lint-files:
+    name: Run Bicep linter
+    runs-on: ubuntu-latest
+    outputs:
+      lintAnnotations: ${{ steps.get-annotations.outputs.result }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Bicep linter
+        run: az bicep build --file infra/main.bicep > lint_errors.txt 2>&1
+      - uses: actions/github-script@v6
+        id: get-annotations
+        with:
+          script: |
+            const fs = require('fs');
+            const filePath = 'lint_errors.txt';
+            
+            // Read the file
+            const data = fs.readFileSync(filePath, 'utf-8');
+            
+            // Split by lines
+            const lines = data.split(/\r?\n/).filter(line => line);
+            
+            const annotations = lines.map(line => {
+              // Extract details from each line
+              const [fullMatch, level, path, lineNumbers, errorType, title, detailMessage] = line.match(
+                /(WARNING|ERROR|INFO): (.*\.bicep)\(([\d,]+)\) : (Warning|Error|Information) ([\w-]+): (.*)$/
+              );
+
+              // Split lineNumbers based on comma
+              const [start_line, end_line] = lineNumbers.split(',').map(num => parseInt(num));
+
+              // organise the annotation levels
+              let annotation_level;
+              if (level === "WARNING") {
+                annotation_level = "warning";
+              } else if (level === "ERROR") {
+                annotation_level = "failure";
+              } else {
+                annotation_level = "notice";  // Default, although not expected based on your example.
+              }
+              
+              return {
+                path,
+                start_line: start_line || 0,
+                end_line: end_line || start_line || 0,
+                annotation_level,
+                message: detailMessage,
+                title: title
+              };
+            });            
+            console.log(annotations);
+            return JSON.stringify(annotations);
+          result-encoding: string
+      - name: Show result
+        run: echo "${{ steps.get-annotations.outputs.result }}"
+  
+  build-app:
+    name: Build Node.js application
+    runs-on: ubuntu-latest
+    needs: build-version-number
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v3
+    - uses: ./.github/actions/build-node
+      with:
+        artifactName: ${{ inputs.artifact-name }}
+        nodeVersion: 16.x
+
+  build-docker:
+    name: Build Docker Image with ACR
+    runs-on: ubuntu-latest
+    needs: [ build-app, docker-lint-files, build-version-number, dockerfile-security-scan ]
+    outputs:
+      image-name: ${{ steps.acr-build.outputs.image-ref }}
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/download-artifact@v3
+      with:
+        name:  ${{ inputs.artifact-name }}
+        path: dist
+    - name: login with oidc
+      uses: azure/login@v1
+      if: ${{ inputs.oidc-login == true}}
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        audience: ${{ inputs.githubTokenAudience }}
+    - name: login with credentials 
+      uses: azure/login@v1
+      if: ${{ inputs.oidc-login == false}}
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: ACR Build
+      id: acr-build
+      uses: azure/CLI@v1
+      with:
+        inlineScript: |
+          echo "image-tag=${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          echo "Using tags ${{ inputs.tag }}"
+          echo "image-ref=${{ inputs.acr-registry }}.azurecr.io/${{ inputs.image-name }}:${{ inputs.tag }}" >> $GITHUB_OUTPUT
+          az acr build -r ${{ inputs.acr-registry }} -f ${{ inputs.dockerfile }} -t "${{ inputs.image-name }}:${{ inputs.tag }}" ./
+
+  validate-deployment:
+    name: Validate the deployment
+    runs-on: ubuntu-latest
+    needs: [ infrastructure-lint-files, build-docker, build-version-number ]
+    steps:
+    - uses: actions/checkout@v3
+    - name: login with oidc
+      uses: azure/login@v1
+      if: ${{ inputs.oidc-login == true}}
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        audience: ${{ inputs.githubTokenAudience }}
+    - name: login with credentials 
+      uses: azure/login@v1
+      if: ${{ inputs.oidc-login == false}}
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - uses: azure/arm-deploy@v1
+      name: Validate build against resource group
+      with:
+        deploymentName: ${{ needs.build-version-number.outputs.non-semver-version }}
+        resourceGroupName: ${{ inputs.resource-group }}
+        template: ./infra/main.bicep
+        parameters: image=${{ needs.build-docker.outputs.image-name }} acrName=${{ inputs.acr-registry }}
+        deploymentMode: Validate
+  
+  deploy-container-instance:
+    name: Deploy to ACI
+    runs-on: ubuntu-latest
+    needs: [ build-docker, infrastructure-lint-files, validate-deployment, build-version-number ]
+    outputs:
+      ipAddress: ${{ steps.aci.outputs.containerIp }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: login with oidc
+      uses: azure/login@v1
+      if: ${{ inputs.oidc-login == true}}
+      with:
+        client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        audience: ${{ inputs.githubTokenAudience }}
+    - name: login with credentials 
+      uses: azure/login@v1
+      if: ${{ inputs.oidc-login == false}}
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - uses: azure/arm-deploy@v1
+      id: aci
+      name: Deploy against resource group
+      with:
+        deploymentName: ${{ needs.build-version-number.outputs.non-semver-version }}
+        resourceGroupName: ${{ inputs.resource-group }}
+        template: ./infra/main.bicep
+        parameters: image=${{ needs.build-docker.outputs.image-name }} acrName=${{ inputs.acr-registry }}
+        failOnStdErr: false
+    - run: echo "You can access the container [here](http:\/\/${{ steps.aci.outputs.containerIp }}\/)" >> $GITHUB_STEP_SUMMARY
+
+  report-deployment:
+    name: Report result
+    runs-on: ubuntu-latest
+    needs: [ docker-lint-files, infrastructure-lint-files, validate-deployment, deploy-container-instance, dockerfile-security-scan ]
+    if: always()
+    steps:
+    - uses: actions/github-script@v6
+      id: merge-annotations
+      name: merge annotations
+      with:
+        script: |
+          const fs = require('fs');
+          // Assuming the outputs from the three jobs are saved as JSON files
+          const dockerLint = JSON.parse(process.env.DOCKER_LINT);
+          const bicepLint = JSON.parse(process.env.BICEP_LINT);
+          const dockerSecurity = JSON.parse(process.env.DOCKER_SECURITY);
+          
+          // Concatenate the outputs
+          const mergedOutput = [...dockerLint, ...bicepLint, ...dockerSecurity];          
+          core.exportVariable('MERGED_ANNOTATIONS', JSON.stringify(mergedOutput, null, 2));
+          console.log(JSON.stringify(mergedOutput, null, 2));
+      env:
+        DOCKER_LINT: ${{ needs.docker-lint-files.outputs.dockerlintAnnotations }}
+        DOCKER_SECURITY: ${{ needs.dockerfile-security-scan.outputs.securityAnnotations }}
+        BICEP_LINT: ${{ needs.infrastructure-lint-files.outputs.lintAnnotations }}
+    - name: Create a Rich Check
+      if: ${{ always() && !contains(needs.*.result, 'failure') }}
+      uses: JediSchools/RichChecks@1.0
+      with:
+        name: "Deployed Artefact"
+        status: "completed"
+        title: "Deployment Result"
+        summary: |
+          Successful deployment
+          <p><i>could contain linting suggestions</i></p>
+        annotations: ${{ steps.merge-annotations.outputs.MERGED_ANNOTATIONS }}
+        details: "You can access the container [here](http://${{ needs.deploy-container-instance.outputs.ipAddress}}/). Any linting findings have been marked."
+        conclusion: "success"
+    - name: Create a Rich Check
+      if: ${{ always() && contains(needs.*.result, 'failure') }}
+      uses: JediSchools/RichChecks@1.0
+      with:
+        name: "Failed Job(s) Detected"
+        status: "completed"
+        title: "Build Result Failure"
+        summary: "Unsuccessful deployment and/or linting errors"
+        annotations: ${{ steps.merge-annotations.outputs.MERGED_ANNOTATIONS }}
+        details: "There has been errors, see the annotations for more details"
+        conclusion: "failure"
