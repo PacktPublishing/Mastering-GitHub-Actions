@@ -1,0 +1,31 @@
+name: comment made
+
+on:
+  issue_comment:
+    type:
+      - created
+env:
+  TRIGGER_WORD: "//issuebot"
+
+permissions:
+  issues: write
+
+jobs:
+  event-recieved:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hmarr/debug-action@v2
+      - name: Check if trigger word is mentioned
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const targetString = context.payload.comment.body;
+            const wordToFind = process.env.TRIGGER_WORD;
+  
+            if (targetString.includes(wordToFind)) {
+              console.log(`The word "${wordToFind}" was found in the string "${targetString}".`);
+              return true;
+            } else {
+              console.log(`The word "${wordToFind}" was not found in the string "${targetString}".`);
+              return false;
+            }
