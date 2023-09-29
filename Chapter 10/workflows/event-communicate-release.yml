@@ -1,0 +1,13 @@
+on:
+  release:
+    types: [published]
+
+jobs:
+  communicate-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - uses: ./.github/actions/communicate-release-slack
+        with:
+          slack-url: ${{ secrets.SLACK_WEBHOOK_URL }}
