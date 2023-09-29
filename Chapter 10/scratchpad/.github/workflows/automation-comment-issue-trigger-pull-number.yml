@@ -1,0 +1,52 @@
+name: comment made
+
+on:
+  issue_comment:
+    type:
+      - created
+env:
+  TRIGGER_WORD: "//issuebot"
+
+permissions:
+  issues: write
+
+jobs:
+  event-recieved:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hmarr/debug-action@v2
+      - name: Check if trigger word is mentioned
+        uses: actions/github-script@v6
+        id: get-request
+        with:
+          script: |
+            const targetString = context.payload.comment.body;
+            const wordToFind = process.env.TRIGGER_WORD;
+  
+            if (targetString.includes(wordToFind)) {
+              console.log(`The word "${wordToFind}" was found in the string "${targetString}".`);
+              const parsedRequest = targetString.replace(wordToFind,"");
+              return { 
+                result: true,
+                request: parsedRequest
+              };
+            } else {
+              console.log(`The word "${wordToFind}" was not found in the string "${targetString}".`);
+              return { 
+                result: false
+              };
+            }
+      - name: display result
+        uses: actions/github-script@v6
+        if: ${{ fromJSON(steps.get-request.outputs.result).result == true }}
+        with:
+          script: |
+            const issueTitle = `Request from ${context.payload.sender.login} from pull request #${context.payload.issue.number}`;
+            const issueBody = `${{ fromJSON(steps.get-request.outputs.result).request }}\nMentioned in pull request [#${context.payload.issue.number}]`
+            const issue = await github.rest.issues.create({
+              title: issueTitle,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: issueBody
+            });
+            console.log(`Issue created: ${issue.data.html_url}`);
