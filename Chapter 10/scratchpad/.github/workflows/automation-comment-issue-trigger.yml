@@ -17,6 +17,7 @@ jobs:
       - uses: hmarr/debug-action@v2
       - name: Check if trigger word is mentioned
         uses: actions/github-script@v6
+        id: get-request
         with:
           script: |
             const targetString = context.payload.comment.body;
@@ -24,8 +25,20 @@ jobs:
   
             if (targetString.includes(wordToFind)) {
               console.log(`The word "${wordToFind}" was found in the string "${targetString}".`);
-              return true;
+              const parsedRequest = targetString.replace(wordToFind,"");
+              return { 
+                result: true,
+                request: parsedRequest
+              };
             } else {
               console.log(`The word "${wordToFind}" was not found in the string "${targetString}".`);
-              return false;
+              return { 
+                result: false
+              };
             }
+      - name: display result
+        uses: actions/github-script@v6
+        if: ${{ fromJSON(steps.get-request.outputs.result).result == true }}
+        with:
+          script: |
+            console.log("request is: ${{ fromJSON(steps.get-request.outputs.result).request }}");
