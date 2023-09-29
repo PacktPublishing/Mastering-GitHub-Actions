@@ -41,4 +41,12 @@ jobs:
         if: ${{ fromJSON(steps.get-request.outputs.result).result == true }}
         with:
           script: |
-            console.log("request is: ${{ fromJSON(steps.get-request.outputs.result).request }}");
+            const issueTitle = `Request from ${context.payload.sender.login} from pull request ${context.payload.issue.number}`;
+            const issueBody = "${{ fromJSON(steps.get-request.outputs.result).request }}"
+            const issue = await github.rest.issues.create({
+              title: issueTitle,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: issueBody
+            });
+            console.log(`Issue created: ${issue.data.html_url}`);
