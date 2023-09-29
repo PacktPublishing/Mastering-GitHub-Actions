@@ -51,41 +51,40 @@ jobs:
             let page = 1;
 
             while (true) {
+              // If we have already fetched 5 or more comments, break
+              if (commentsByTokenUser.length >= 5) break;
+              
               const comments = await github.rest.issues.listComments({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issueNumber,
-                per_page: 100,
+                per_page: 5,
                 page: page
               });
-
-              console.log(comments)
-
+              
               if (comments.data.length === 0) break;
-
-              // If we have already fetched 5 or more comments, break
-              if (commentsByTokenUser.length >= 5) break;
-
               commentsByTokenUser = commentsByTokenUser.concat(comments.data.filter(comment => comment.user.login === process.env.BOT_LOGIN));
               page++;
             }
-
             return {
               comments: commentsByTokenUser.map(comment => comment.body)
             };
       - name: Display fetched comments
         if: ${{ fromJSON(steps.check-trigger.outputs.result).result == true }}
         id: get-prompt
+        env:
+          COMMENTS: ${{ steps.get-comments.outputs.result }}
         uses: actions/github-script@v6
         with:
           script: |
-            let commentsData = ${{ fromJSON(steps.get-comments.outputs.result).comments }};
-            const request = "";
-
+            const commentsDataString = process.env.COMMENTS;
+            const parsedData = JSON.parse(commentsDataString);
+            const commentsData = parsedData.comments;
+      
             console.log('Type of commentsData:', typeof commentsData);
-
+      
             let comments = [];
-
+      
             if (typeof commentsData === 'string') {
                 try {
                     comments = JSON.parse(commentsData);
@@ -95,9 +94,9 @@ jobs:
             } else if (Array.isArray(commentsData)) {
                 comments = commentsData;
             }
-
+      
             console.log('Processed comments:', comments);
-
+      
             let commentsString = Array.isArray(comments) && comments.length > 0 ? comments.map(comment => `<S>: ${comment}`).join('\n') : "";
 
             let prompt = `
