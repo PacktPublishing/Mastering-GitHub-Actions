@@ -1,0 +1,75 @@
+name: communicate release to slack
+description: |
+  Communicates the body of a release and key data from a release object to the slack API
+  Expecting a release object, will skip if not present
+inputs:
+  slack-url:
+    description: 'Slack Webhook URL'
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Mask secret
+      run: |
+        echo "::add-mask::${{ inputs.slack-url }}"
+      shell: bash
+    - name: manipulate payload for slack
+      id: prepare-payload
+      run: |
+        details="${{ github.event.release.body }}"
+        processed_details=${details//$'\n'/\\n} # Replace newlines with the string \n
+        echo "::set-output name=processed_details::$processed_details" 
+      shell: bash
+    - name: Send Release Info to Slack
+      if: github.event_name == 'release'
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "Release published in ${{ github.repository }}",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Organisation:*\n<${{ github.event.repository.owner.html_url }}|${{ github.event.repository.owner.login }}>"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Repository:*\n<${{ github.event.repository.html_url }}|${{ github.event.repository.name}}>"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Event:*\n${{ github.event_name }}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Actor:*\n<${{ github.event.sender.html_url }}|${{ github.event.sender.login }}>"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "Release Details:\n${{ steps.prepare-payload.outputs.processed_details }}\n\n<${{ github.event.release.html_url }}|View Release>"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack-url }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
