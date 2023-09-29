@@ -1,0 +1,140 @@
+name: ai comment made
+
+on:
+  issue_comment:
+    types: [created]
+
+env:
+  TRIGGER_WORD: "//ai"
+  BOT_LOGIN: "github-actions[bot]"
+
+permissions:
+  issues: write
+
+jobs:
+  event-recieved:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hmarr/debug-action@v2
+      
+      - name: Check if trigger word is mentioned
+        uses: actions/github-script@v6
+        id: check-trigger
+        with:
+          script: |
+            const targetString = context.payload.comment.body;
+            const wordToFind = process.env.TRIGGER_WORD;
+  
+            if (targetString.includes(wordToFind)) {
+              console.log(`The word "${wordToFind}" was found in the string "${targetString}".`);
+              const parsedRequest = targetString.replace(wordToFind,"");
+              return { 
+                result: true,
+                request: parsedRequest
+              };
+            } else {
+              console.log(`The word "${wordToFind}" was not found in the string "${targetString}".`);
+              return { 
+                result: false
+              };
+            }
+
+      - name: Get all comments by the token user
+        uses: actions/github-script@v6
+        id: get-comments
+        if: ${{ fromJSON(steps.check-trigger.outputs.result).result == true }}
+        with:
+          script: |
+            const issueNumber = context.payload.issue.number;
+
+            let commentsByTokenUser = [];
+            let page = 1;
+
+            while (true) {
+              const comments = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issueNumber,
+                per_page: 100,
+                page: page
+              });
+
+              console.log(comments)
+
+              if (comments.data.length === 0) break;
+
+              // If we have already fetched 5 or more comments, break
+              if (commentsByTokenUser.length >= 5) break;
+
+              commentsByTokenUser = commentsByTokenUser.concat(comments.data.filter(comment => comment.user.login === process.env.BOT_LOGIN));
+              page++;
+            }
+
+            return {
+              comments: commentsByTokenUser.map(comment => comment.body)
+            };
+      - name: Display fetched comments
+        if: ${{ fromJSON(steps.check-trigger.outputs.result).result == true }}
+        id: get-prompt
+        uses: actions/github-script@v6
+        with:
+          script: |
+            let commentsData = ${{ fromJSON(steps.get-comments.outputs.result).comments }};
+            const request = "";
+
+            console.log('Type of commentsData:', typeof commentsData);
+
+            let comments = [];
+
+            if (typeof commentsData === 'string') {
+                try {
+                    comments = JSON.parse(commentsData);
+                } catch (error) {
+                    comments = [commentsData];
+                }
+            } else if (Array.isArray(commentsData)) {
+                comments = commentsData;
+            }
+
+            console.log('Processed comments:', comments);
+
+            let commentsString = Array.isArray(comments) && comments.length > 0 ? comments.map(comment => `<S>: ${comment}`).join('\n') : "";
+
+            let prompt = `
+              Ensure your response:
+              1. Contains no whitespace at the start or end.
+              2. Doesn't exceed 100 characters in length.
+              3. Doesn't repeat or directly echo the provided context or prior responses.
+
+              Your previous responses: ${commentsString}`;
+
+            return {
+              prompt
+            };
+      - name: Get ChatGPT completion
+        id: chatgpt
+        uses: cahaseler/openai-api@v1.0.0
+        with:
+          apiKey: ${{ secrets.OPENAI_KEY }}
+          prompt: '${{ fromJSON(steps.get-prompt.outputs.result).prompt }}'
+          input: '${{ fromJSON(steps.check-trigger.outputs.result).request }}'
+          model: 'gpt-3.5-turbo'
+          temperature: 1
+          max_tokens: 200
+      - name: Comment on the issue
+        uses: actions/github-script@v6
+        env:
+          RESPONSE: ${{ steps.chatgpt.outputs.completion }}
+        with:
+          script: |
+            const issueNumber = context.issue.number;
+            const repoName = context.repo.repo;
+            const ownerName = context.repo.owner;
+            const commentBody = process.env.RESPONSE;
+
+            await github.rest.issues.createComment({
+              owner: ownerName,
+              repo: repoName,
+              issue_number: issueNumber,
+              body: commentBody
+            });
