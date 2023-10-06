@@ -35,7 +35,6 @@ jobs:
             });
             console.log(`In progress check created with ID: ${check.data.id}`);
             return check.data.id
-      - run: sleep 30
       - name: step to create check completed
         uses: actions/github-script@v6
         id: create-check-completed
