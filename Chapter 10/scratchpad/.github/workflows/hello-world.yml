@@ -1,0 +1,9 @@
+on:
+  workflow_dispatch:
+
+jobs:
+  hello-world-selfhosted:
+    name: hello world from a self hosted runner
+    runs-on: self-hosted
+    steps:
+      - run: echo Hello
