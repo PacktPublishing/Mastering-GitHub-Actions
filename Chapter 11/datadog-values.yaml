@@ -1,0 +1,22 @@
+datadog:
+  site: us5.datadoghq.com
+
+  logs:
+    enabled: true
+    containerCollectAll: true
+  kubelet:
+    tlsVerify: false
+  processAgent:
+    enabled: true
+  clusterAgent:
+    enabled: true
+  orchestratorExplorer:
+    enabled: true
+  networkMonitoring:
+    enabled: true
+  kubeStateMetricsCore:
+    enabled: true
+providers:
+  aks:
+    enabled: true
+  
