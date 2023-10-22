@@ -1,0 +1,61 @@
+name: Manual - Add topic to repository
+
+on:
+  workflow_dispatch:
+    inputs:
+      topic:
+        description: topic to add
+        required: true
+      pat:
+        description: PAT with repo admin access for organisaiton
+        required: true
+        default: PUT_PAT_HERE
+
+jobs:
+  add-topic:
+    runs-on: generic
+    strategy:
+      matrix:
+        include: 
+          - name: scratchpad
+            owner: JediSchools
+          - name: RichChecks
+            owner: JediSchools
+
+    steps:
+      - name: mask pat
+        run: echo "::add-mask::${{ inputs.pat }}"
+      - name: Add missing topic to repo - ${{ inputs.topic }}
+        uses: actions/github-script@v6
+        env:
+          OWNER: ${{ matrix.owner }}
+          REPO: ${{ matrix.name }}
+        with:
+          github-token: ${{ inputs.pat }}
+          debug: true
+          script: |
+            const suppliedTopic = "${{ inputs.topic }}";
+            
+            // Get current topics of the repository
+            const currentTopicsResponse = await github.rest.repos.getAllTopics({
+                owner: process.env.OWNER,
+                repo: process.env.REPO
+            });
+            
+            const currentTopics = currentTopicsResponse.data.names;
+            
+            // Check if the supplied topic exists
+            if (!currentTopics.includes(suppliedTopic)) {
+              // If not, add the topic
+              currentTopics.push(suppliedTopic);
+              
+              await github.rest.repos.replaceAllTopics({
+                owner: process.env.OWNER,
+                repo: process.env.REPO,
+                names: currentTopics
+              });
+              
+              console.log(`Added topic: ${suppliedTopic}`);
+            } else {
+              console.log(`Topic ${suppliedTopic} already exists.`);
+            }
