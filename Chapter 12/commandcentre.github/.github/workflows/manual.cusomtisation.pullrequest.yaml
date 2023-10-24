@@ -1,0 +1,59 @@
+name: Cusomisation Properties Workflow
+
+on:  
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/config/custom_properties/repos.json'
+  pull_request:
+    paths:
+      - '.github/workflows/config/custom_properties/repos.json'
+
+jobs:
+  read-json:
+    runs-on: generic
+    outputs:
+      repojson: ${{ steps.set-repo-json.outputs.repojson }}
+    steps:
+      - uses: actions/checkout@v3
+      - id: set-repo-json
+        env:
+          JSONFILEPATH: .github/workflows/config/custom_properties/repos.json
+        run: |
+          if [[ ! -f "$JSONFILEPATH" ]]; then
+              echo "Cannot find specified repo json file '$JSONFILEPATH'" >&2
+              exit 1
+          fi
+          JSON=$(cat $JSONFILEPATH)
+          JSON="${JSON//'%'/'%25'}"
+          JSON="${JSON//$'\n'/'%0A'}"
+          JSON="${JSON//$'\r'/'%0D'}"
+          echo "::set-output name=repojson::$JSON"
+          
+  pull-request:
+    runs-on: generic
+    needs: read-json
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.read-json.outputs.repojson) }}
+      max-parallel: 2
+      fail-fast: false
+    name: Apply Config on pull request
+    if: github.event_name != 'pull_request'
+    steps:
+      - run: echo "Hello from a pull request"
+
+  push-event:
+    runs-on: generic
+    needs: read-json
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.read-json.outputs.repojson) }}
+      max-parallel: 2
+      fail-fast: false
+    name: Apply Config on push event
+    if: github.event_name == 'pull_request'
+    steps:
+      - run: echo "Hello from a push event"
+    
