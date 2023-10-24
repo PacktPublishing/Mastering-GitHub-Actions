@@ -1,0 +1,62 @@
+name: Manual - Add branch protection to repository - by filter on topic
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter-topic:
+        description: "topic to filter on to collect repositories"
+        required: true
+      baseBranchPattern:
+        description: "the pattern of the base branch"
+        required: true
+        default: '^feature\/[a-zA-Z0-9]+$'
+      numberOfReviewers:
+        description: "the number of reviewers required in a pull request"
+        required: true
+        default: '1'
+      requiredCheckName:
+        description: "the name of the check to match against"
+        required: false
+      pat:
+        description: "PAT with repo admin access for organisation"
+        required: true
+        default: PUT_PAT_HERE
+
+jobs:
+  get-repos:
+    runs-on: generic
+    outputs:
+      repojson: ${{ steps.get-repo.outputs.repojson }}
+    steps:
+      - name: get repos
+        id: get-repo
+        uses: echapmanFromBunnings/repository-query@v1.3
+        with:
+          repo-owner: JediSchools
+          repo-token: ${{ inputs.pat }}
+          topic-filter: '${{ inputs.filter-topic }}'
+  
+  add-branch-protection:
+    runs-on: generic
+    needs: get-repos
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.get-repos.outputs.repojson) }}
+      max-parallel: 2
+      fail-fast: false
+    steps:
+      - name: mask pat
+        run: echo "::add-mask::${{ inputs.pat }}"
+      - name: Branch Guardian
+        uses: infamous-riddles/branch-guardian@v1
+        with: 
+          PERSONAL-ACCESS-TOKEN: ${{ inputs.pat }}
+          BASE-BRANCH-PATTERN: ${{ inputs.baseBranchPattern}}
+          REQUIRED-NUMBER-OF-REVIEWERS: ${{ inputs.numberOfReviewers }}
+          REQUIRED-STATUS-CHECKS: ${{ inputs.requiredCheckName }}
+          REQUIRE-REVIEW-FROM-CODEOWNERS: 'true'
+          DISMISS-STALE-PR-APPROVALS-ON-NEW-COMMITS: 'true'
+          REQUIRE-LINEAR-HISTORY: 'true'
+          ALLOW-FORCE-PUSHES: 'false'
+          ALLOW-DELETIONS: 'false'
+          INCLUDE-ADMINISTRATORS: 'true'
