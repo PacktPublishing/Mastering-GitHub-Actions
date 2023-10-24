@@ -1,0 +1,68 @@
+name: Manual - Add team to repository with perms - by filter on topic
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter-topic:
+        description: topic to filter on to collect repositories
+        required: true
+      teamName:
+        description: "the slug of the team"
+        required: true
+        default: PUT_TEAM_HERE
+      roleName:
+        description: "the name of the role to apply on the repository"
+        required: true
+        default: ROLE_NAME_HERE
+      pat:
+        description: PAT with repo admin access for organisation
+        required: true
+        default: PUT_PAT_HERE
+
+jobs:
+  get-repos:
+    runs-on: generic
+    outputs:
+      repojson: ${{ steps.get-repo.outputs.repojson }}
+    steps:
+      - name: get repos
+        id: get-repo
+        uses: echapmanFromBunnings/repository-query@v1.3
+        with:
+          repo-owner: JediSchools
+          repo-token: ${{ inputs.pat }}
+          topic-filter: '${{ inputs.filter-topic }}'
+  
+  add-role:
+    runs-on: generic
+    needs: get-repos
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.get-repos.outputs.repojson) }}
+      max-parallel: 2
+      fail-fast: false
+    steps:
+      - name: mask pat
+        run: echo "::add-mask::${{ inputs.pat }}"
+      - name: Add role to repo - ${{ inputs.topic }}
+        uses: actions/github-script@v6
+        env:
+          OWNER: ${{ matrix.owner }}
+          REPO: ${{ matrix.name }}
+        with:
+          github-token: ${{ inputs.pat }}
+          debug: true
+          script: |
+            const { data: repo } = await github.rest.repos.get({
+                owner: process.env.OWNER,
+                repo: process.env.REPO
+              });
+              
+            console.log('Adding Role to %s', repo.id);
+            await github.rest.teams.addOrUpdateRepoPermissionsInOrg({
+              org: process.env.OWNER,
+              team_slug: '${{ inputs.teamName }}',
+              owner: process.env.OWNER,
+              repo: process.env.REPO,
+              permission: '${{ inputs.roleName }}'
+            });
