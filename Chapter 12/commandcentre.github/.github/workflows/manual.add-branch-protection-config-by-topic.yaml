@@ -45,7 +45,7 @@ jobs:
         run: echo "::add-mask::${{ inputs.pat }}"
       - uses: actions/checkout@v4
       - name: Run Branch Protection
-        uses: mistereechapman/update-branch-protection@v1
+        uses: mistereechapman/update-branch-protection@1.0
         with:
           token: '${{ inputs.pat }}' 
           organisationName: ${{ matrix.owner }}
