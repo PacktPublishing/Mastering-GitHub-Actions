@@ -1,0 +1,35 @@
+{
+  "main": {
+    "required_status_checks": {
+      "strict": true,
+      "contexts": ["prosebot"]
+    },
+    "enforce_admins": true,
+    "required_pull_request_reviews": {
+      "dismissal_restrictions": {
+        "users": [""],
+        "teams": [""]
+      },
+      "dismiss_stale_reviews": true,
+      "require_code_owner_reviews": true,
+      "required_approving_review_count": 2,
+      "require_last_push_approval": true,
+      "bypass_pull_request_allowances": {
+        "users": [""],
+        "teams": [""]
+      }
+    },
+    "restrictions": {
+      "users": [""],
+      "teams": [""],
+      "apps": [""]
+    },
+    "required_linear_history": true,
+    "allow_force_pushes": false,
+    "allow_deletions": false,
+    "block_creations": true,
+    "required_conversation_resolution": true,
+    "lock_branch": false,
+    "allow_fork_syncing": false
+  }
+}
