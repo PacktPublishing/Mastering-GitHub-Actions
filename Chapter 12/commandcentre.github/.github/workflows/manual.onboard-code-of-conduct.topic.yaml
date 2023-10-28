@@ -1,0 +1,88 @@
+name: Manual - Add code of conduct - by filter on topic
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter-topic:
+        description: "topic to filter on to collect repositories"
+        required: true
+      pat:
+        description: "PAT with repo admin access for organisation"
+        required: true
+        default: PUT_PAT_HERE
+
+jobs: 
+  get-repos:
+    runs-on: generic
+    outputs:
+      repojson: ${{ steps.get-repo.outputs.repojson }}
+    steps:
+      - name: get repos
+        id: get-repo
+        uses: echapmanFromBunnings/repository-query@v1.3
+        with:
+          repo-owner: JediSchools
+          repo-token: ${{ inputs.pat }}
+          topic-filter: '${{ inputs.filter-topic }}'
+  
+  add-code-conduct:
+    runs-on: generic
+    needs: get-repos
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.get-repos.outputs.repojson) }}
+      max-parallel: 2
+      fail-fast: false
+    steps:
+      - run: |
+          sudo apt update
+          sudo apt install -y git
+      - name: mask pat
+        run: echo "::add-mask::${{ inputs.pat }}"
+      - name: Generate GitHub App Token
+        id: gtr
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ vars.COMMITTER_APP_ID }}
+          private_key: ${{ secrets.COMMITTER_PRIVATE_KEY }}
+          installation_id: ${{ vars.COMMITTER_INSTALLATION_ID }}
+      - uses: actions/checkout@v4
+        with:
+          path: commandcentre
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          repository: ${{ matrix.owner }}/${{ matrix.name }}
+          token: ${{ inputs.pat }}
+      - name: Inject code of conduct
+        id: Inject
+        env:
+          COC_PATH: "commandcentre/.github/workflows/content/docs/CODE_OF_CONDUCT.md"
+        run: |
+          mkdir -p repo/docs
+          cp $COC_PATH repo/CODE_OF_CONDUCT.md
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ steps.gtr.outputs.token }}
+          path: repo
+          commit-message: "docs: Add onboard code of conduct [skip ci]"
+          title: '[Chore] Onboard doc file [skip ci]'
+          body: This is an automated pull request to add the a code of conduct file to this repository
+          branch: onboard-coc
+          labels: docs
+          delete-branch: true
+      - name: Approve Pull Request
+        uses: juliangruber/approve-pull-request-action@v1.1.1
+        with:
+          github-token: ${{ inputs.pat }}
+          number: ${{ steps.cpr.outputs.pull-request-number }}
+          repo: ${{ matrix.owner }}/${{ matrix.name }}
+      - name: Merge Pull Request
+        uses: juliangruber/merge-pull-request-action@v1
+        with:
+          github-token: ${{ inputs.pat }}
+          number: ${{ steps.cpr.outputs.pull-request-number }}
+          method: squash
+          repo: ${{ matrix.owner }}/${{ matrix.name }}
