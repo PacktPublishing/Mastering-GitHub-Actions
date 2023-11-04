@@ -1,0 +1,167 @@
+name: InnerSource repo crawler - "JediSchools"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * *"
+
+env:
+  ORGANIZATION: "JediSchools"
+  SCANNER_APP_ID: 418689
+  SCANNER_INSTALLATION_ID: 43645296
+  LOCAL_APP_ID: 418690
+  LOCAL_INSTALLATION_ID: 43645343
+  APPROVAL_APP_ID: 418693
+  APPROVAL_INSTALLATION_ID: 43645610
+
+jobs:
+  build:
+    name: InnerSource repo crawler
+    runs-on: [ ubuntu-latest ]
+    steps:
+    - name: Generate Scanner GitHub App Token
+      id: generate_token_scanner
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ env.SCANNER_APP_ID }}
+        private_key: ${{ secrets.BOT_SCANNER_PRIVATE_KEY }}
+        installation_id: ${{ env.SCANNER_INSTALLATION_ID }}
+    - name: Generate Local GitHub App Token
+      id: generate_token_local
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ env.LOCAL_APP_ID }}
+        private_key: ${{ secrets.BOT_LOCAL_PRIVATE_KEY }}
+        installation_id: ${{ env.LOCAL_INSTALLATION_ID }}
+    - name: Generate Approval GitHub App Token
+      id: generate_token_approver
+      uses: tibdex/github-app-token@v1
+      with:
+        app_id: ${{ env.APPROVAL_APP_ID }}
+        private_key: ${{ secrets.BOT_APPROVER_PRIVATE_KEY }}
+        installation_id: ${{ env.APPROVAL_INSTALLATION_ID }}
+    - name: Checkout code
+      uses: actions/checkout@v3    
+    - name: Run crawler tool
+      uses: docker://ghcr.io/zkoppert/innersource-crawler:v1
+      env:
+        GH_TOKEN: ${{ steps.generate_token_scanner.outputs.token }}
+        ORGANIZATION: ${{ env.ORGANIZATION }}
+        TOPIC: public
+    - name: Adjust score
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+
+          function calculateScore(repo) {
+              // initial score is 50 to give active repos with low GitHub KPIs (forks, watchers, stars) a better starting point
+              let iScore = 50;
+              // weighting: forks and watches count most, then stars, add some little score for open issues, too
+              iScore += repo.forks_count * 5;
+              iScore += (repo.subscribers_count ? repo.subscribers_count : 0);
+              iScore += repo.stargazers_count / 3;
+              iScore += repo.open_issues_count / 5;
+
+              // updated in last 3 months: adds a bonus multiplier between 0..1 to overall score (1 = updated today, 0 = updated more than 100 days ago)
+              let iDaysSinceLastUpdate = (new Date().getTime() - new Date(repo.updated_at).getTime()) / 1000 / 86400;
+              iScore = iScore * ((1 + (100 - Math.min(iDaysSinceLastUpdate, 100))) / 100);
+
+              // evaluate participation stats for the previous 3 months
+              repo._InnerSourceMetadata = repo._InnerSourceMetadata || {};
+              if (repo._InnerSourceMetadata.participation) {
+                  // average commits: adds a bonus multiplier between 0..1 to overall score (1 = >10 commits per week, 0 = less than 3 commits per week)
+                  let iAverageCommitsPerWeek = repo._InnerSourceMetadata.participation.slice(-13).reduce((a, b) => a + b) / 13;
+                  iScore = iScore * ((1 + (Math.min(Math.max(iAverageCommitsPerWeek - 3, 0), 7))) / 7);
+              }
+
+              // boost calculation:
+              // all repositories updated in the previous year will receive a boost of maximum 1000 declining by days since last update
+              let iBoost = (1000 - Math.min(iDaysSinceLastUpdate, 365) * 2.74);
+              // gradually scale down boost according to repository creation date to mix with "real" engagement stats
+              let iDaysSinceCreation = (new Date().getTime() - new Date(repo.created_at).getTime()) / 1000 / 86400;
+              iBoost *= (365 - Math.min(iDaysSinceCreation, 365)) / 365;
+              // add boost to score
+              iScore += iBoost;
+              // give projects with a meaningful description a static boost of 50
+              iScore += (repo.description?.length > 30 || repo._InnerSourceMetadata.motivation?.length > 30 ? 50 : 0);
+              // give projects with contribution guidelines (CONTRIBUTING.md) file a static boost of 100
+              iScore += (repo._InnerSourceMetadata.guidelines ? 100 : 0);
+              // build in a logarithmic scale for very active projects (open ended but stabilizing around 5000)
+              if (iScore > 3000) {
+                  iScore = 3000 + Math.log(iScore) * 100;
+              }
+              // final score is a rounded value starting from 0 (subtract the initial value)
+              iScore = Math.round(iScore - 50);
+              // add score to metadata on the fly
+              repo._InnerSourceMetadata.score = iScore;
+
+              return iScore;
+          }
+
+          function compare(a, b) {
+            if ( a.id < b.id ){
+              return -1;
+            }
+            if ( a.id > b.id ){
+              return 1;
+            }
+            return 0;
+          }          
+                    
+          const data = JSON.parse(fs.readFileSync('repos.json', 'utf8'));
+          Object.entries(data).forEach(function f([k,v]) {
+            if (v) {
+              calculateScore(v)
+              f([k, --v]);
+            }
+          })
+          data.sort( compare );
+          const stringData = JSON.stringify(data, null, '\t');
+
+          // write JSON string to a file
+          fs.writeFile('repos.json', stringData, (err) => {
+              if (err) {
+                  throw err;
+              }
+              console.log("JSON data is saved.");
+          });          
+    - name: Create Pull Request
+      id: cpr
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ steps.generate_token_local.outputs.token }}
+        commit-message: "chore(meta): Upsert repos.json"
+        title: '[Chore] Onboard repos datasource'
+        body: This is an automated PR to update the data source required for inner source portal
+        branch: onboard-innersource
+        labels: automation
+        delete-branch: true
+    - name: Status
+      run: |
+        echo "Pull Request Number - ${{ steps.cpr.outputs.pull-request-number }}"
+        echo "Pull Request URL - ${{ steps.cpr.outputs.pull-request-url }}"
+        echo "Pull Request Operation - ${{ steps.cpr.outputs.pull-request-operation }}"
+        echo "Pull Request Head SHA - ${{ steps.cpr.outputs.pull-request-head-sha }}"
+        echo
+        echo "======== Added/Updated datasource file ========"
+        cat repos.json
+        echo
+        echo ""
+    - name: Approve Pull Request
+      uses: juliangruber/approve-pull-request-action@v1.1.1
+      with:
+        github-token: ${{ steps.generate_token_approver.outputs.token }}
+        number: ${{ steps.cpr.outputs.pull-request-number }}
+    - name: Merge Pull Request
+      uses: juliangruber/merge-pull-request-action@v1
+      with:
+        github-token: ${{ steps.generate_token_approver.outputs.token }}
+        number: ${{ steps.cpr.outputs.pull-request-number }}
+        method: squash
+    - uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: repo-artifact
+        path: ./repos.json
+        if-no-files-found: error
