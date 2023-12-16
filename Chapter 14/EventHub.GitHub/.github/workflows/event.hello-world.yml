@@ -1,0 +1,14 @@
+name: hello world
+
+on:
+  repository_dispatch:
+    types: [hello-world]
+
+jobs:
+  hello-world:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: hmarr/debug-action@v2
+      - run: |
+          echo "Client Payload(name):"
+          echo "${{ toJson(github.event.client_payload) }}"
