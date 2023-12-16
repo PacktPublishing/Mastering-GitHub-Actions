@@ -1,0 +1,22 @@
+name: Emit hello world
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Your Name'
+        required: true
+        default: 'John Doe'
+
+jobs:
+  trigger_workflow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Trigger Workflow
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          event-type: "hello-world"
+          token: ${{ secrets.EVENTHUB_TOKEN }}
+          repository: 'YOUR_ORG/EventHub.GitHub'
+          client-payload: '{"name": "${{ github.event.inputs.name }}"}'
