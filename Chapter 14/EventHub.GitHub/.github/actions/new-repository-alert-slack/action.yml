@@ -1,0 +1,77 @@
+name: notify slack of new repository
+description: "sends an alert of a new repository creation"
+inputs:
+  repo_name:
+    description: name of the repository
+    required: true
+  org_name:
+    description: name of the org
+    required: true
+  team_name:
+    description: name of the team
+    required: true
+  actor_name:
+    description: name of the actor
+    required: true
+  repo_url:
+    description: url of the repository
+    required: true
+  webhook_address:
+    description: webhook url to use
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Send JSON data to Slack
+      id: slack
+      uses: slackapi/slack-github-action@v1.24.0
+      with:
+        payload: |
+          {
+            "blocks": [
+              {
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "New repository created!",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Name:*\n${{inputs.repo_name}}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Organisation:*\n${{inputs.org_name}}"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "fields": [
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Team Name:*\n${{inputs.team_name}}"
+                  },
+                  {
+                    "type": "mrkdwn",
+                    "text": "*Creator:*\n${{inputs.actor_name}}"
+                  }
+                ]
+              },
+              {
+                "type": "section",
+                "text": {
+                  "type": "mrkdwn",
+                  "text": "<${{inputs.repo_url}}|View Repository>"
+                }
+              }
+            ]
+          }
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.webhook_address }}
+        SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
