@@ -1,0 +1,140 @@
+name: Event - Templates Onboard - sithlords - nodejs app
+
+run-name: Event - Templates Onboard - sithlords - nodejs app by @${{ github.actor }}
+
+on:
+  repository_dispatch:
+    types: [SithLords.NodeJSApp]
+
+jobs:
+  init-application:
+    name: Initiate NodeJS App
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Generate GitHub App Token
+        id: gtr
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ vars.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+          installation_id: ${{ vars.INSTALLATION_ID }}
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          repository: ${{ github.event.client_payload.repo }}
+          token: ${{ steps.gtr.outputs.token }}
+      - name: Use Node.js 18.x
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+      - run: |
+          cd repo
+          npm init -y
+          npx express-generator
+          npm install -g express-generator -y
+          express --view=pug --git --force app
+        shell: bash
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ steps.gtr.outputs.token }}
+          path: repo
+          commit-message: "ci: onboard of application skeleton of express [skip ci]"
+          title: 'ci: onboard of application skeleton'
+          body: This is an automated pull request to app the application skeleton to this repository using a generator
+          branch: onboard-app
+          delete-branch: true
+
+  add-role:
+    name: grant team access
+    runs-on:  [ ubuntu-latest ]
+    steps:
+      - name: Generate GitHub App Token
+        id: gtr
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ vars.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+          installation_id: ${{ vars.INSTALLATION_ID }}
+      - id: get-id
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const org = context.payload.client_payload.repo.split('/')[0]
+            const name = context.payload.client_payload.repo.split('/')[1]
+            core.setOutput('org', org)
+            core.setOutput('name', name)
+      - name: Add role to repo
+        uses: actions/github-script@v7
+        env:
+          OWNER: ${{steps.get-id.outputs.org}}
+          REPO: ${{steps.get-id.outputs.name}}
+        with:
+          github-token: ${{ steps.gtr.outputs.token }}
+          script: |
+            await github.rest.teams.addOrUpdateRepoPermissionsInOrg({
+              org: process.env.OWNER,
+              team_slug: 'sith-lords',
+              owner: process.env.OWNER,
+              repo: process.env.REPO,
+              permission: 'push'
+            });
+
+  initialise-readme:
+    name: initalise readme with project specifics
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - name: Generate GitHub App Token
+        id: gtr
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ vars.APP_ID }}
+          private_key: ${{ secrets.PRIVATE_KEY }}
+          installation_id: ${{ vars.INSTALLATION_ID }}
+      - uses: actions/checkout@v4
+        with:
+          path: repo
+          repository: ${{ github.event.client_payload.repo }}
+          token: ${{ steps.gtr.outputs.token }}
+      - name: update readme
+        run: |
+          sed -i 's/<<INSTALL_INSTRUCTIONS>>/npm install app/g' repo/README.md
+          sed -i 's/<<DEPENDENCY_INSTRUCTIONS>>/- Node.js/g' repo/README.md
+          sed -i 's/<<EXECUTING_INSTRUCTIONS>>/node app.js/g' repo/README.md
+        shell: bash
+      - name: Create Pull Request
+        id: cpr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ steps.gtr.outputs.token }}
+          path: repo
+          commit-message: "ci: initalising readme [skip ci]"
+          title: 'ci: onboard of build specific details'
+          body: This is an automated pull request to app specific details to this repository
+          branch: onboard-readme
+          delete-branch: true
+
+
+  communicate:
+    name: communicate to the team of the repository creation
+    runs-on: [ ubuntu-latest ]
+    steps:
+      - id: get-id
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const org = context.payload.client_payload.repo.split('/')[0]
+            const name = context.payload.client_payload.repo.split('/')[1]
+            core.setOutput('org', org)
+            core.setOutput('name', name)
+      - name: checkout code
+        uses: actions/checkout@v4
+      - uses: ./.github/actions/new-repository-alert-slack
+        with:
+          repo_name: ${{ steps.get-id.outputs.name }}
+          org_name: ${{ steps.get-id.outputs.org }}
+          actor_name: ${{ github.event.sender.login }}
+          repo_url: ${{ github.event.repository.html_url }}
+          team_name: Siths Lords
+          webhook_address: ${{ secrets.SITH_LORDS_SECRET_CHANNEL_WEBHOOK }}
