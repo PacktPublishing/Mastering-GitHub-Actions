@@ -6,6 +6,8 @@ on:
 
 jobs:
   pages-deploy:
+    environment:
+      name: github-pages
     runs-on: [ ubuntu-latest ]
     permissions:
       pages: write
