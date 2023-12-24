@@ -309,6 +309,8 @@ function showModal (vRepoId, oEvent) {
 			? `${oRepo.html_url}/blob/${oRepo.default_branch}/${oRepo._InnerSourceMetadata.guidelines}`
 			: oRepo.html_url;
 
+	let stemplateUrl = `https://github.com/new?owner=${oRepo.owner.login}&template_name=${oRepo.name}&template_owner=${oRepo.owner.login}`;
+
 	let oContext = {
 		"id" : (typeof oRepo.id === "string" ? "'" + oRepo.id + "'" : oRepo.id),
 		"mediaURL": sLogoURL,
@@ -320,6 +322,7 @@ function showModal (vRepoId, oEvent) {
 		"stars": oRepo.stargazers_count,
 		"templateClass": (oRepo.is_template == true) ? "template" : "no-template",
 		"isTemplate": oRepo.is_template,
+		"templateUrl": stemplateUrl,
 		"issues": oRepo.open_issues_count,
 		"forks": oRepo.forks_count,
 		"score": sScoreIndicator,
@@ -379,6 +382,8 @@ function generateItem (sDisplay, oRepo) {
 			? `${oRepo.html_url}/blob/${oRepo.default_branch}/${oRepo._InnerSourceMetadata.guidelines}`
 			: oRepo.html_url;
 
+	let stemplateUrl = `https://github.com/new?owner=${oRepo.owner.login}&template_name=${oRepo.name}&template_owner=${oRepo.owner.login}`;
+
 	let oContext = {
 		"id" : (typeof oRepo.id === "string" ? "'" + oRepo.id + "'" : oRepo.id),
 		"mediaURL": sLogoURL,
@@ -389,6 +394,7 @@ function generateItem (sDisplay, oRepo) {
 		"stars": oRepo.stargazers_count,
 		"templateClass": (oRepo.is_template == true) ? "template" : "no-template",
 		"isTemplate": oRepo.is_template,
+		"templateUrl": stemplateUrl,
 		"issues": oRepo.open_issues_count,
 		"forks": oRepo.forks_count,
 		"score": getRepoActivity(oRepo)[0],
