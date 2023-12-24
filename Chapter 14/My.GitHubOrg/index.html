@@ -101,7 +101,7 @@
     <script id="card-template" type="text/x-handlebars-template">
       <div>
         <div class="col l4 s12 m6">
-          <div class="card hoverable" onclick="showModal({{id}}, event)">
+          <div class="card hoverable {{isTemplate}}" onclick="showModal({{id}}, event)">
             <div class="card-content">
               <span class="card-media">
                 <img src="{{mediaURL}}"/>
@@ -209,6 +209,11 @@
         <article>
           <h4>{{title}}</h4>
           <p class="repoLink"><a href="{{repoURL}}" target="_blank">{{repoTitle}}</a></p>
+          {{#if isTemplate}}
+          <div class="blue card-action darken-1">
+            <a class="white-text" href="{{templateUrl}}" target="_blank">Use Template</a>
+          </div>
+          {{/if}}
           <p>{{description}}</p>
           {{#if topics}}<p><b>Topics:</b><br/>
             {{#each topics}}{{#if this}}<span class='pill'>{{this}}</span> {{/if}}{{/each}}
