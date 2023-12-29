@@ -9,7 +9,7 @@ env:
   TRIGGER_WORD: "//issuebot"
 
 jobs:
-  event-recieved:
+  event-received:
     runs-on: ubuntu-latest
     steps:
       - uses: hmarr/debug-action@v2
