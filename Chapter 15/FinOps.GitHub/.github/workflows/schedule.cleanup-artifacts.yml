@@ -1,0 +1,88 @@
+name: 'Delete old artifacts'
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 0 * * *' # every hour
+        
+jobs:
+  get-repos:
+    runs-on: [ubuntu-latest]
+    outputs:
+      repojson: ${{ steps.get-repo.outputs.repojson }}
+    steps:
+      - name: get repos
+        id: get-repo
+        uses: echapmanFromBunnings/repository-query@v1.3
+        with:
+          repo-owner: 'YOUR_ORG'
+          repo-token: ${{ secrets.REPO_ADMIN_TOKEN }}
+          topic-filter: "api"
+          
+          
+  delete-artifact:
+    runs-on: [ubuntu-latest]
+    needs: [get-repos]
+    strategy:
+      matrix:
+        include: ${{ fromJson(needs.get-repos.outputs.repojson) }}
+      max-parallel: 2
+      fail-fast: false
+    steps:
+      - name: Add cleanup artifacts
+        uses: actions/github-script@v6
+        id: arti
+        env:
+          OWNER: ${{ matrix.owner }}
+          REPO: ${{ matrix.name }}
+          EXPIRE_IN: 432000000 #5 days in ms
+          EXCLUDE_PREFIX: 'sbom'
+          ONLY_PREFIX: ''
+        with:
+          github-token: ${{ secrets.REPO_ADMIN_TOKEN }}
+          debug: true
+          script: |
+            const { data: artifacts } = await github.rest.actions.listArtifactsForRepo({
+                owner: process.env.OWNER,
+                repo: process.env.REPO
+            });
+            const deletedArtifacts = []
+            
+            function differenceInMilliseconds( date1, date2 ) {
+              // Convert both dates to milliseconds
+              var date1_ms = date1.getTime();
+              var date2_ms = date2.getTime();
+
+              // Calculate the difference in milliseconds
+              var difference_ms = date1_ms - date2_ms; 
+              return difference_ms;
+            }
+            
+            function shouldDelete(artifactName, artifactCreateDate){
+              const expireInMs = process.env.EXPIRE_IN
+              const onlyPrefix = process.env.ONLY_PREFIX
+              const exceptPrefix = process.env.EXCLUDE_PREFIX
+              
+              const included = onlyPrefix === '' || artifactName.startsWith(onlyPrefix)
+              const excluded = exceptPrefix && artifactName.startsWith(exceptPrefix)
+              console.log(`difference found: ${differenceInMilliseconds(new Date(), new Date(artifactCreateDate))}`)
+              const expired =
+                differenceInMilliseconds(new Date(), new Date(artifactCreateDate)) >=
+                expireInMs
+
+              return included && !excluded && expired
+            }
+            
+            for (const artifact of artifacts.artifacts) {
+              if (shouldDelete(artifact.name, artifact.created_at)) {
+                deletedArtifacts.push(artifact)
+                core.debug(`Deleting artifact:\n${JSON.stringify(artifact, null, 2)}`)
+                await github.rest.actions.deleteArtifact({
+                  owner: process.env.OWNER,
+                  repo: process.env.REPO,
+                  // eslint-disable-next-line @typescript-eslint/camelcase
+                  artifact_id: artifact.id
+                })
+              }
+            }
+            
+            core.setOutput('deleted-artifacts', JSON.stringify(deletedArtifacts))
