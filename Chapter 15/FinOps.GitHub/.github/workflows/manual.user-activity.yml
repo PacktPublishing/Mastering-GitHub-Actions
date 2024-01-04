@@ -1,0 +1,33 @@
+name: Manual - Member Contribution Report
+
+on:
+  workflow_dispatch:
+    inputs:
+      fromdate:
+        description: 'Optional interval start date (format: yyyy-mm-dd)'
+        required: false # Skipped if workflow dispatch input is not provided
+      todate:
+        description: 'Optional interval end date (format: yyyy-mm-dd)'
+        required: false # Skipped if workflow dispatch input is not provided
+      pat:
+        description: 'the secret pat to run against (repo, read:org, read:user)'
+
+jobs:
+  member-contribution-report:
+    runs-on: [ ubuntu-latest ]
+
+    steps:
+      - run: echo '::add-mask::${{ inputs.pat }}'
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Get Member Contributions
+        uses: nicklegan/github-org-member-contribution-action@v1.1.1
+        with:
+          token: ${{ inputs.pat }}
+          fromdate: ${{ github.event.inputs.fromdate }} # Used for workflow dispatch input
+          todate: ${{ github.event.inputs.todate }} # Used for workflow dispatch input
+      - run: find reports/ -type f -exec mv {} report.csv \;
+      - uses: actions/upload-artifact@v4
+        with:
+          name: membercontributor
+          path: report.csv
