@@ -1,0 +1,23 @@
+name: Manual - Dormant Users Report
+
+on:
+  workflow_dispatch:
+
+jobs:
+  produce-report:
+    runs-on: [ubuntu-latest]
+    steps:
+    - name: Analyze User Activity
+      id: analyze_user_activity
+      uses: peter-murray/inactive-users-action@v1
+      with:
+        token: ${{ secrets.REPOSITORY_ADMIN_PAT }}
+        organization: ${{ github.repository_owner }}
+        activity_days: 120
+
+    - name: Save Report
+      uses: actions/upload-artifact@v4
+      with:
+        name: userreports
+        path: |
+          ${{ steps.analyze_user_activity.outputs.report_csv }}
