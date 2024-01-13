@@ -10,14 +10,15 @@ An in-depth paragraph about your project and overview of use.
 
 ### Dependencies
 
-<<DEPENDENCY_INSTRUCTIONS>>
+- List any prerequisites, libraries, OS version, etc., needed before installing the program.
+- e.g., Windows 10, Node.js v12.13.0
 
 ### Installing
 
 How/where to download your program. Any modifications needed to be made to files/folders.
 
 ```bash
-<<INSTALL_INSTRUCTIONS>>
+npm install my-project
 ```
 
 ## Executing program
@@ -25,7 +26,7 @@ How/where to download your program. Any modifications needed to be made to files
 How to run the program. Step-by-step bullets.
 
 ```bash
-<<EXECUTING_INSTRUCTIONS>>
+node app.js
 ```
 
 ## Usage
