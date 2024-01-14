@@ -1,0 +1,64 @@
+# Configuration for generating release notes
+
+changelog:
+  categories:
+    - title: '🚀 New Features'
+      labels:
+        - 'feature'
+        - 'new'
+    - title: '🐛 Bug Fixes'
+      labels:
+        - 'bug'
+        - 'fix'
+    - title: '🔨 Refactorings'
+      labels:
+        - 'refactor'
+    - title: '📚 Documentation Updates'
+      labels:
+        - 'docs'
+    - title: '💡 Improvements'
+      labels:
+        - 'enhancement'
+        - 'improvement'
+    - title: '🧪 Tests'
+      labels:
+        - 'test'
+        - 'testing'
+  exclude-labels:
+    - 'skip-changelog'
+  render:
+    contributors: true
+    exclude:
+      labels:
+        - 'internal'
+        - 'meta'
+  version-resolver:
+    major:
+      labels:
+        - 'major'
+    minor:
+      labels:
+        - 'minor'
+    patch:
+      labels:
+        - 'patch'
+    default: 'patch'
+  configure-sections:
+    breaking-changes:
+      title: '💥 Breaking Changes'
+      labels:
+        - 'breaking'
+    known-issues:
+      title: '⚠ Known Issues'
+      labels:
+        - 'known-issue'
+    thanks-section:
+      title: '🙏 Special Thanks'
+      labels:
+        - 'special-thanks'
+  pre-release:
+    title: 'Beta Release Notes'
+    labels:
+      - 'beta'
+    exclude-labels:
+      - 'production'
