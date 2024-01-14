@@ -1,0 +1,108 @@
+name: Pull Request Lint
+
+on:
+  pull_request:
+
+concurrency:
+  group: "${{ github.event.repository.name }}-${{ github.event.pull_request.number }}"
+  cancel-in-progress: true
+
+jobs:
+  pr-lint:
+    name: Pull Request Lint
+    runs-on: [ ubuntu-latest ]
+    permissions:
+      issues: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Pull Request
+        uses: pataraco/pr-lint-action@v0.0.1
+        with:        
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+          # If PR Title contains:
+          lint-body-if-pr-title-has-regex: '([A-Z]{3}-\d+)'
+          # Then PR Body should contain:
+          pr-body-regex: '(\[[A-Z]{3}-\d+\])'
+          # The PR title should match:
+          pr-title-regex: '^([A-Z]{3}-(\d+)|\[([cC]hore|Release)\]|(Requested))'
+          pr-body-regex-failed-comment: |
+            The Pull Request is a Feature, Hotfix or Bugfix
+            Need to include the JIRA ticket reference link in the desciption of
+            the Pull Request.
+            - e.g. [API-1234]
+          pr-title-regex-failed-comment: |
+            👎 The Pull Request title fails this RegEx expression!
+            - `%regex%`
+            <details>
+              <summary>
+                Here are some accepted PR title examples (Click to expand)...
+              </summary>
+              Using ABC-XXXX title requires you to have it listed in the PR body with
+              some text speaking as to how it helps solve that reference. It would
+              be in the format of <b>[</b>ABC-XXXX<b>]</b>
+              <p>
+                <ul>
+                  <li>ABC-XXXX Lorem Ipsum</li>
+                  <li>[Chore] - Lorem Ipsum</li>
+                  <li>[Release] - Lorem Ipsum</li>
+                  <li>Requested by XXX-1234 Lorem Ipsum</li>
+                </ul>
+              </p>
+            </details>
+
+      - name: Check and create/update labeler.yml
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const FILE_PATH = ".github/labeler.yml";
+
+            // Define the YAML content
+            const YAML_CONTENT = `
+            workflow:
+              - changed-files:
+                - any-glob-to-any-file: '.github/**'
+            infrastructure:
+              - changed-files:
+                - any-glob-to-any-file: 'deploy/core/**'
+            documentation:
+              - changed-files:
+                - any-glob-to-any-file: ['docs/**','*.md','**/*.md']
+            config:
+              - changed-files:
+                - any-glob-to-any-file: '.config/**'
+            `.trim();
+
+            // Check if the file exists
+            if (!fs.existsSync(FILE_PATH)) {
+              console.log("Creating file as it does not exist.");
+              // Ensure the .github directory exists
+              fs.mkdirSync(path.dirname(FILE_PATH), { recursive: true });
+              // Write the YAML content to the file
+              fs.writeFileSync(FILE_PATH, YAML_CONTENT, 'utf8');
+            } else {
+              console.log("File already exists, skipping.");
+            }
+      - uses: actions/labeler@v5
+      - name: Label check        
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pullrequest } = await github.rest.pulls.get({
+                owner: '${{ github.event.repository.owner.login }}',
+                repo: '${{ github.event.repository.name }}',
+                pull_number: ${{ github.event.number }}
+              });
+
+            if(typeof pullrequest.labels == 'undefined' || pullrequest.labels.length == 0){
+              await github.rest.issues.createComment({
+                  owner: '${{ github.event.repository.owner.login }}',
+                  repo: '${{ github.event.repository.name }}',
+                  issue_number: ${{ github.event.number }},
+                  body: 'I cannot find a label on this pull request. Please add one to help categorize the release'
+                });
+              core.setFailed('Missing label on PR')
+            }
