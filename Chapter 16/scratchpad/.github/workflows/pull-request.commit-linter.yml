@@ -1,0 +1,11 @@
+name: Commit message linter
+on:
+  pull_request:
+
+jobs:
+  commit-lint:
+    name: Run commit lint
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: YOUR_ORG/GHA.Jedi.Private.Templates/.github/workflows/gha.workflows.commit-linter.yml@main
