@@ -1,0 +1,15 @@
+name: Commit Message Linter
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: checkout code
+      uses: actions/checkout@v4
+    - uses: taskmedia/action-conventional-commits@v1.1.11
+      with:
+        # Default: fix|feat|revert
+        types: "build|chore|ci|docs|feat|fix|perf|refactor|style|test|publish"
