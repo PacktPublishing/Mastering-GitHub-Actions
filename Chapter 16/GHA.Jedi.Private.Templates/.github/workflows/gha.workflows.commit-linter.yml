@@ -3,6 +3,8 @@ name: Commit Message Linter
 on:
   workflow_call:
 
+run-name: Linting - Commit Messages from @{{ github.actor }}
+
 jobs:
   build:
     runs-on: ubuntu-latest
