@@ -5,10 +5,9 @@ This repository contains code for the Mastering GitHub Actions link, published b
 
 <br />
 <a href="https://www.amazon.com/stores/Eric-Chapman/author/B0CWCYSB17?ref=ap_rdr&isDramIntegrated=true&shoppingPortalEnabled=true"><img src="https://img.shields.io/badge/amazon%20author-52b5f7?style=for-the-badge&logo=amazon%20alexa&logoColor=white" /></a>
-
 # Mastering GitHub Actions
 
-<a href="https://www.packtpub.com/product/mastering-github-actions/9781805128625?utm_source=github&utm_medium=repository&utm_campaign=9781805128625"><img src="" alt="" height="256px" align="right"></a>
+<a href="https://www.packtpub.com/product/mastering-github-actions/9781805128625?utm_source=github&utm_medium=repository&utm_campaign=9781805128625"><img src="https://content.packt.com/B21142/cover_image_small.jpg" alt="Mastering GitHub Actions" height="256px" align="right"></a>
 
 This is the code repository for [Mastering GitHub Actions](https://www.packtpub.com/product/mastering-github-actions/9781805128625?utm_source=github&utm_medium=repository&utm_campaign=9781805128625), published by Packt.
 
